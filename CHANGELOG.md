@@ -8,6 +8,9 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 
 ## [Unreleased]
 
+### Fixed
+- `web/Dockerfile`: add `RUN chmod -R a+rX /app` after COPY-from-build so files with restrictive host perms (umask 077 → 0600 on `package.json`) become readable by the `nextjs` runtime user. Container was crash-looping with `EACCES: permission denied, open '/app/package.json'` after rebuild.
+
 ### Added
 - **Phase 7.1 — Downloadable extension.** `web/public/mtrly-extension.zip` is now served as a static asset on the prod domain (`https://circlearc-59513674.slonix.dev/mtrly-extension.zip`). Landing page step 2 now has a direct download link so reviewers don't have to `git clone`.
 - `scripts/build-extension-zip.js` — Node+archiver script to regenerate the zip from `extension/` (run whenever extension source changes).
