@@ -157,7 +157,14 @@ export default function BalancePage() {
 
       <section className="mt-10 rounded border border-border bg-surface p-5">
         <div className="flex items-baseline justify-between">
-          <div className="font-mono text-xs uppercase text-muted">Circle Nanopayments · Gateway</div>
+          <div>
+            <div className="font-mono text-xs uppercase text-muted">Platform settlement layer · Circle Gateway</div>
+            <p className="mt-1 max-w-xl text-xs text-muted">
+              This is the <b>platform demo-buyer EOA</b>, not your wallet. Each viewer tick is batched through this
+              address onto Arc Testnet via Circle Gateway. Transfers below are server-side settlements — not
+              charges to your account.
+            </p>
+          </div>
           <div className="font-mono text-[10px] text-muted">{gw?.chain ?? "—"}</div>
         </div>
         {!gw?.ok ? (
@@ -165,45 +172,7 @@ export default function BalancePage() {
             Gateway not configured on this deploy (awaiting `MTRLY_DEMO_BUYER_KEY` + testnet funding).
           </p>
         ) : (
-          <>
-            <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <div className="font-mono text-[10px] uppercase text-muted">Gateway balance</div>
-                <div className="mt-1 font-mono text-xl">${gw.gateway?.availableFormatted ?? "0"}</div>
-                <div className="font-mono text-[10px] text-muted">available · gasless</div>
-              </div>
-              <div>
-                <div className="font-mono text-[10px] uppercase text-muted">EOA wallet</div>
-                <div className="mt-1 font-mono text-xl">${gw.wallet?.balanceFormatted ?? "0"}</div>
-                <div className="break-all font-mono text-[10px] text-muted">{gw.address}</div>
-              </div>
-            </div>
-            <div className="mt-4">
-              <div className="font-mono text-[10px] uppercase text-muted">Recent Gateway transfers</div>
-              {(!gw.transfers || gw.transfers.length === 0) ? (
-                <div className="mt-2 rounded border border-dashed border-border p-3 text-center text-xs text-muted">
-                  No Gateway transfers yet.
-                </div>
-              ) : (
-                <ul className="mt-2 divide-y divide-border rounded border border-border">
-                  {gw.transfers.map((t) => (
-                    <li key={t.id} className="px-3 py-2 font-mono text-[11px]">
-                      <div className="flex justify-between">
-                        <span className="text-muted">{t.status}</span>
-                        <span>${t.amount}</span>
-                        <span className="text-muted">{new Date(t.createdAt).toLocaleString()}</span>
-                      </div>
-                      {t.explorerUrl && (
-                        <a href={t.explorerUrl} target="_blank" rel="noreferrer" className="text-accent underline">
-                          arcscan ↗
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </>
+          <GatewayPanel gw={gw} />
         )}
       </section>
 
@@ -227,5 +196,87 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="font-mono text-xs uppercase text-muted">mtrly / balance</div>
       <div className="mt-6">{children}</div>
     </main>
+  );
+}
+
+const STATUS_LABEL: Record<string, { text: string; color: string }> = {
+  received: { text: "queued", color: "text-muted" },
+  batched: { text: "batched", color: "text-yellow-300" },
+  confirmed: { text: "confirmed", color: "text-accent" },
+  completed: { text: "completed", color: "text-green-400" },
+  failed: { text: "failed", color: "text-red-400" },
+};
+
+function GatewayPanel({ gw }: { gw: GatewayStatus }) {
+  const [showFailed, setShowFailed] = useState(false);
+  const all = gw.transfers ?? [];
+  const live = all.filter((t) => t.status !== "failed");
+  const failed = all.filter((t) => t.status === "failed");
+  const visible = showFailed ? all : live;
+
+  return (
+    <>
+      <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <div className="font-mono text-[10px] uppercase text-muted">Gateway balance</div>
+          <div className="mt-1 font-mono text-xl">${gw.gateway?.availableFormatted ?? "0"}</div>
+          <div className="font-mono text-[10px] text-muted">available · gasless</div>
+        </div>
+        <div>
+          <div className="font-mono text-[10px] uppercase text-muted">EOA wallet</div>
+          <div className="mt-1 font-mono text-xl">${gw.wallet?.balanceFormatted ?? "0"}</div>
+          <div className="break-all font-mono text-[10px] text-muted">{gw.address}</div>
+        </div>
+      </div>
+      <div className="mt-4">
+        <div className="flex items-center justify-between">
+          <div className="font-mono text-[10px] uppercase text-muted">
+            Recent Gateway transfers {failed.length > 0 && <span className="text-red-400">· {failed.length} failed</span>}
+          </div>
+          {failed.length > 0 && (
+            <button
+              onClick={() => setShowFailed((v) => !v)}
+              className="font-mono text-[10px] uppercase text-muted underline hover:text-fg"
+            >
+              {showFailed ? "hide failed" : `show ${failed.length} failed`}
+            </button>
+          )}
+        </div>
+        {visible.length === 0 ? (
+          <div className="mt-2 rounded border border-dashed border-border p-3 text-center text-xs text-muted">
+            No Gateway transfers yet.
+          </div>
+        ) : (
+          <ul className="mt-2 divide-y divide-border rounded border border-border">
+            {visible.map((t) => {
+              const label = STATUS_LABEL[t.status] ?? { text: t.status, color: "text-muted" };
+              return (
+                <li key={t.id} className="px-3 py-2 font-mono text-[11px]">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className={label.color}>{label.text}</span>
+                    <span className="tabular-nums">${Number(t.amount).toFixed(6)}</span>
+                    <span className="text-muted">{new Date(t.createdAt).toLocaleString()}</span>
+                    {t.explorerUrl ? (
+                      <a href={t.explorerUrl} target="_blank" rel="noreferrer" className="text-accent underline">
+                        arcscan ↗
+                      </a>
+                    ) : (
+                      <span className="text-muted">—</span>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {failed.length > 0 && showFailed && (
+          <p className="mt-2 font-mono text-[10px] text-muted">
+            "failed" here means Circle Gateway's testnet batch-bundler returned an error — funds were
+            automatically returned to the Gateway available balance, no USDC was lost. Often transient
+            on testnet.
+          </p>
+        )}
+      </div>
+    </>
   );
 }
