@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LiveTicker } from "@/components/LiveTicker";
 
 export default function Home() {
   return (
@@ -73,6 +74,17 @@ export default function Home() {
             {" "}— the meter ticks every 5s while playback runs.
           </li>
         </ol>
+      </section>
+
+      <section className="mt-20 border-t border-border pt-12">
+        <div className="font-mono text-xs uppercase text-muted">Live onchain activity</div>
+        <p className="mt-2 max-w-2xl text-sm text-muted">
+          Every tick settles as a real batched transfer on Arc Testnet via Circle Gateway.
+          Click any tx to inspect on arcscan.
+        </p>
+        <div className="mt-6">
+          <LiveTicker />
+        </div>
       </section>
 
       <footer className="mt-24 border-t border-border pt-8 font-mono text-xs text-muted">

@@ -66,8 +66,9 @@ export async function GET() {
       fromDisplayName: p.fromUser.displayName,
       content: p.content ? { title: p.content.title, normalizedUrl: p.content.normalizedUrl, kind: p.content.kind } : null,
       nanopaymentTxId: p.nanopaymentTxId,
+      onchainTxHash: p.onchainTxHash,
       settledOnchain: p.settledOnchain,
-      explorerUrl: p.nanopaymentTxId ? `https://testnet.arcscan.app/tx/${p.nanopaymentTxId}` : null,
+      explorerUrl: p.onchainTxHash ? `https://testnet.arcscan.app/tx/${p.onchainTxHash}` : null,
     })),
   });
 }

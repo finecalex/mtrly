@@ -146,7 +146,7 @@ export async function applyTick(params: {
           if (settle.transaction) {
             await db.payment.update({
               where: { id: pid },
-              data: { nanopaymentTxId: settle.transaction, settledOnchain: true },
+              data: { nanopaymentTxId: settle.transaction },
             });
           }
         } catch (err) {

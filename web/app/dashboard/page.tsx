@@ -19,6 +19,7 @@ type Earnings = {
     fromDisplayName: string | null;
     content: { title: string | null; normalizedUrl: string; kind: string } | null;
     nanopaymentTxId: string | null;
+    onchainTxHash: string | null;
     settledOnchain: boolean;
     explorerUrl: string | null;
   }>;
@@ -40,6 +41,7 @@ type Me = {
   email: string;
   displayName: string | null;
   role: string;
+  circleWalletAddr?: string | null;
 };
 
 export default function DashboardPage() {
@@ -51,7 +53,14 @@ export default function DashboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
+  const [wdAmount, setWdAmount] = useState("");
+  const [wdDest, setWdDest] = useState("");
+  const [wdBusy, setWdBusy] = useState(false);
+  const [wdResult, setWdResult] = useState<{ explorerUrl: string; recipient: string; amount: string } | null>(null);
+  const [wdErr, setWdErr] = useState<string | null>(null);
+
   async function refresh() {
+    fetch("/api/gateway/resolve", { method: "POST" }).catch(() => null);
     const [meR, eR, cR] = await Promise.all([
       fetch("/api/auth/me").then((r) => r.json()),
       fetch("/api/creator/earnings").then((r) => r.json()),
@@ -67,6 +76,29 @@ export default function DashboardPage() {
     const id = setInterval(refresh, 5000);
     return () => clearInterval(id);
   }, []);
+
+  async function withdraw(e: React.FormEvent) {
+    e.preventDefault();
+    setWdErr(null);
+    setWdResult(null);
+    setWdBusy(true);
+    const payload: Record<string, unknown> = { amountUsdc: parseFloat(wdAmount) };
+    if (wdDest.trim()) payload.destination = wdDest.trim();
+    const res = await fetch("/api/creator/withdraw", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    setWdBusy(false);
+    if (!res.ok) {
+      setWdErr(data.error ?? data.reason ?? "failed");
+      return;
+    }
+    setWdResult({ explorerUrl: data.explorerUrl, recipient: data.recipient, amount: data.amount });
+    setWdAmount("");
+    refresh();
+  }
 
   async function addContent(e: React.FormEvent) {
     e.preventDefault();
@@ -120,6 +152,54 @@ export default function DashboardPage() {
         <Card title="Balance (USDC)" value={`$${fmt(earnings?.balanceUsdc)}`} sub="Spendable + unclaimed" />
         <Card title="Lifetime earned" value={`$${fmt(earnings?.lifetimeEarnedUsdc)}`} sub={`${earnings?.lifetimePaymentCount ?? 0} payments`} />
         <Card title="Registered URLs" value={contents.length.toString()} sub="YouTube + web" />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="font-mono text-xs uppercase text-muted">Withdraw to wallet</h2>
+        <p className="mt-2 text-sm text-muted">
+          Cash out your USDC balance to any Arc-testnet address via Circle Gateway. Defaults to your Circle wallet.
+        </p>
+        <form onSubmit={withdraw} className="mt-3 flex flex-col gap-3 sm:flex-row">
+          <input
+            type="number"
+            step="0.000001"
+            min="0"
+            max="100"
+            placeholder="Amount (USDC)"
+            value={wdAmount}
+            onChange={(e) => setWdAmount(e.target.value)}
+            required
+            className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg sm:w-48"
+          />
+          <input
+            type="text"
+            placeholder={me.circleWalletAddr ?? "0x… destination (optional)"}
+            value={wdDest}
+            onChange={(e) => setWdDest(e.target.value)}
+            className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
+          />
+          <button
+            type="submit"
+            disabled={wdBusy}
+            className="rounded border border-accent bg-accent px-5 py-2 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
+          >
+            {wdBusy ? "…" : "Withdraw"}
+          </button>
+        </form>
+        {wdErr && <div className="mt-2 font-mono text-xs text-red-400">{wdErr}</div>}
+        {wdResult && (
+          <div className="mt-3 rounded border border-border bg-surface p-3 font-mono text-xs">
+            <div className="text-muted">Withdrew ${fmt(wdResult.amount)} to {wdResult.recipient}</div>
+            <a
+              href={wdResult.explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:underline"
+            >
+              View on arcscan ↗
+            </a>
+          </div>
+        )}
       </section>
 
       <section className="mt-10">
@@ -212,11 +292,13 @@ export default function DashboardPage() {
                       href={p.explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      title={p.nanopaymentTxId ?? ""}
+                      title={p.onchainTxHash ?? ""}
                       className="text-accent hover:underline"
                     >
                       onchain ↗
                     </a>
+                  ) : p.nanopaymentTxId ? (
+                    <span className="text-muted" title={p.nanopaymentTxId}>batching…</span>
                   ) : (
                     <span className="text-muted">offchain</span>
                   )}

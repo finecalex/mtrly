@@ -27,6 +27,10 @@ export async function gatewayStatus() {
       availableFormatted: balances.gateway.formattedAvailable,
       total: balances.gateway.total.toString(),
       totalFormatted: balances.gateway.formattedTotal,
+      withdrawing: balances.gateway.withdrawing.toString(),
+      withdrawingFormatted: balances.gateway.formattedWithdrawing,
+      withdrawable: balances.gateway.withdrawable.toString(),
+      withdrawableFormatted: balances.gateway.formattedWithdrawable,
     },
     wallet: {
       balance: balances.wallet.balance.toString(),

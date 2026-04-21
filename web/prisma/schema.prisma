@@ -124,6 +124,7 @@ model Payment {
   content          ContentUrl? @relation(fields: [contentId], references: [id], onDelete: SetNull)
   amountUsdc       Decimal  @db.Decimal(20, 8)
   nanopaymentTxId  String?
+  onchainTxHash    String?
   settledOnchain   Boolean  @default(false)
   createdAt        DateTime @default(now())
 

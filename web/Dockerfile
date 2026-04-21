@@ -22,7 +22,9 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/prisma ./prisma
 
-RUN chmod -R a+rX /app
+RUN chmod -R a+rX /app \
+    && mkdir -p /app/.next/cache \
+    && chown -R nextjs:nodejs /app/.next
 
 USER nextjs
 EXPOSE 3000
