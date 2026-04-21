@@ -5,9 +5,12 @@ const CIRCLE_BATCHING_NAME = "GatewayWalletBatched";
 const CIRCLE_BATCHING_VERSION = "1";
 const CIRCLE_BATCHING_SCHEME = "exact";
 
+const CIRCLE_GATEWAY_URL =
+  process.env.CIRCLE_GATEWAY_URL ?? "https://gateway-api-testnet.circle.com";
+
 let _facilitator: BatchFacilitatorClient | null = null;
 export function getFacilitator(): BatchFacilitatorClient {
-  if (!_facilitator) _facilitator = new BatchFacilitatorClient();
+  if (!_facilitator) _facilitator = new BatchFacilitatorClient({ url: CIRCLE_GATEWAY_URL });
   return _facilitator;
 }
 

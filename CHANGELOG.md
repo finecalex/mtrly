@@ -8,6 +8,9 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 
 ## [Unreleased]
 
+### Changed
+- **Upgrade `@circle-fin/x402-batching` 2.1.0 → 3.0.1.** v3 is a breaking release: the default URL for `BatchFacilitatorClient` is now **mainnet** (`https://gateway-api.circle.com`) whereas v2.1 defaulted to testnet. `web/lib/x402.ts` now passes `{url: CIRCLE_GATEWAY_URL ?? "https://gateway-api-testnet.circle.com"}` explicitly so testnet stays the default and can be overridden via env. `GatewayClient` (buyer-side) is unaffected — it still derives the endpoint from `chain: "arcTestnet"`. Verified on testnet: `/api/gateway/status` returns `ok:true`, `/api/admin/trigger-tick` returns a fresh Circle transfer UUID. `TECH_REFERENCE.md` updated with v3 breaking-change note and the testnet URL override pattern.
+
 ### Fixed
 - **Gateway transfer amount was rendered as raw USDC base-units** ("$5000" instead of "$0.005") on `/balance`. `/api/gateway/status` now returns `amount` as a dollar-string ("0.005000") and keeps base-units under `amountBaseUnits`. UI re-labeled to make it explicit that this section shows the **platform demo-buyer's** outbound batching transfers, not the logged-in user's wallet. Failed transfers hidden behind a toggle + explanatory note that failed = Circle testnet bundler error and funds are returned to Gateway balance (no USDC lost).
 

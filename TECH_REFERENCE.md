@@ -68,16 +68,23 @@ forge create src/Contract.sol:Contract \
 
 ### SDK и пакеты
 
+**Версия в Mtrly:** `@circle-fin/x402-batching@3.0.1` (обновлено 2026-04-21).
+
+> ⚠️ **v3 breaking change:** default URL у `BatchFacilitatorClient` в v3 — **mainnet**
+> (`https://gateway-api.circle.com`). В v2.1 был testnet. При работе с testnet —
+> ВСЕГДА передавай URL явно: `new BatchFacilitatorClient({ url: "https://gateway-api-testnet.circle.com" })`.
+> У `GatewayClient` (buyer-side) URL по-прежнему выводится из `chain: "arcTestnet"` автоматически.
+
 **Buyer (клиент):**
 ```bash
-npm install @circle-fin/x402-batching viem
+npm install @circle-fin/x402-batching@^3.0.1 viem
 ```
 
 ```typescript
 import { GatewayClient } from "@circle-fin/x402-batching/client";
 
 const client = new GatewayClient({
-  chain: "arcTestnet",
+  chain: "arcTestnet",                        // автоматически подбирает testnet endpoint
   privateKey: process.env.PRIVATE_KEY as `0x${string}`,
 });
 
@@ -90,16 +97,24 @@ const { data, status } = await client.pay(url);
 
 **Seller (сервер):**
 ```typescript
-import { createGatewayMiddleware } from "@circle-fin/x402-batching/server";
+import { BatchFacilitatorClient } from "@circle-fin/x402-batching/server";
 
-const gateway = createGatewayMiddleware({
-  sellerAddress: "0xYOUR_ADDRESS"
+// ВАЖНО: в v3 default = mainnet. Для testnet передаём url явно.
+const facilitator = new BatchFacilitatorClient({
+  url: process.env.CIRCLE_GATEWAY_URL ?? "https://gateway-api-testnet.circle.com",
 });
 
-app.get("/premium", gateway.require("$0.01"), (req, res) => {
-  res.json({ data: "...", paid_by: req.payment.payer });
-});
+const { kinds } = await facilitator.getSupported();
+// kinds: [{ scheme: "exact", network: "eip155:5042002", extra: { verifyingContract, assets: [{symbol:"USDC",address}] } }]
+
+// verify + settle вызываются middleware поверх HTTP 402 flow:
+//   facilitator.verify(paymentHeader, requirements)
+//   facilitator.settle(paymentHeader, requirements)   // → { transaction: "<UUID>" }
 ```
+
+> `BatchFacilitatorConfig` в v3 принимает только `url` и `createAuthHeaders`. Никаких
+> клиентских ручек для размера/частоты бандла нет — Circle решает cadence серверно
+> (см. "Batch settlement timing" ниже).
 
 **Альтернатива — x402-express (Coinbase):**
 ```bash
@@ -286,7 +301,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | Ограничение | Влияние на Drip |
 |-------------|----------------|
 | Nanopayments — только testnet | Демо на тестовых деньгах. Ок для хакатона |
-| `@circle-fin/x402-batching` — новый, мало документации | Закладывать время на debugging |
+| `@circle-fin/x402-batching` v3 — default URL = mainnet | Для testnet передавай `{url}` явно в `BatchFacilitatorClient` |
 | Entity Secret — невосстановим | Бэкапить сразу |
 | Faucet — 10-20 USDC/день | Заранее накопить на тесты |
 | Batch settlement — время непредсказуемо | Arc Explorer может показывать tx с задержкой |

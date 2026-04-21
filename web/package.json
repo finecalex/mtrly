@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@circle-fin/developer-controlled-wallets": "^8.0.0",
-    "@circle-fin/x402-batching": "^2.1.0",
+    "@circle-fin/x402-batching": "^3.0.1",
     "@x402/core": "^2.3.0",
     "@x402/evm": "^2.3.0",
     "@prisma/client": "^5.20.0",
