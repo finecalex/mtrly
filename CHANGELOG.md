@@ -8,6 +8,9 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 
 ## [Unreleased]
 
+### Fixed
+- **`/balance` Gateway panel no longer hides `batched`/`failed` history under a fresh `received` flood.** The old `/api/gateway/status` fetched 25 most-recent transfers in a single call sorted by `createdAt` desc — so as soon as >25 new ticks fired after the most recent Circle batcher run (runs roughly every 2h at the top of the hour on testnet), ALL older `batched`/`confirmed`/`failed` rows got pushed off the list and the UI appeared "stuck on received". Now the endpoint fetches per-status (`received`, `batched`, `confirmed`, `completed`, `failed`) via `searchTransfers({status})`, returns aggregate `counts`, and merges them into a 25-row mixed list. UI adds a 5-cell status-count row + footnote explaining Circle's ~2h batcher cadence, so users can see at a glance that e.g. 25 transfers HAVE been batched even when the recent list is all `received`.
+
 ### Changed
 - **Upgrade `@circle-fin/x402-batching` 2.1.0 → 3.0.1.** v3 is a breaking release: the default URL for `BatchFacilitatorClient` is now **mainnet** (`https://gateway-api.circle.com`) whereas v2.1 defaulted to testnet. `web/lib/x402.ts` now passes `{url: CIRCLE_GATEWAY_URL ?? "https://gateway-api-testnet.circle.com"}` explicitly so testnet stays the default and can be overridden via env. `GatewayClient` (buyer-side) is unaffected — it still derives the endpoint from `chain: "arcTestnet"`. Verified on testnet: `/api/gateway/status` returns `ok:true`, `/api/admin/trigger-tick` returns a fresh Circle transfer UUID. `TECH_REFERENCE.md` updated with v3 breaking-change note and the testnet URL override pattern.
 

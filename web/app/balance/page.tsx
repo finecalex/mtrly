@@ -35,6 +35,7 @@ type GatewayStatus = {
     createdAt: string;
     explorerUrl?: string;
   }>;
+  counts?: Record<string, number>;
   error?: string;
 };
 
@@ -199,6 +200,16 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function StatCell({ label, value, color, hint }: { label: string; value: number; color: string; hint: string }) {
+  return (
+    <div>
+      <div className={`font-mono text-lg tabular-nums ${color}`}>{value}</div>
+      <div className="font-mono text-[9px] uppercase text-muted">{label}</div>
+      <div className="font-mono text-[9px] text-muted opacity-70">{hint}</div>
+    </div>
+  );
+}
+
 const STATUS_LABEL: Record<string, { text: string; color: string }> = {
   received: { text: "queued", color: "text-muted" },
   batched: { text: "batched", color: "text-yellow-300" },
@@ -213,6 +224,7 @@ function GatewayPanel({ gw }: { gw: GatewayStatus }) {
   const live = all.filter((t) => t.status !== "failed");
   const failed = all.filter((t) => t.status === "failed");
   const visible = showFailed ? all : live;
+  const counts = gw.counts ?? {};
 
   return (
     <>
@@ -228,6 +240,19 @@ function GatewayPanel({ gw }: { gw: GatewayStatus }) {
           <div className="break-all font-mono text-[10px] text-muted">{gw.address}</div>
         </div>
       </div>
+
+      <div className="mt-4 grid grid-cols-5 gap-2 rounded border border-border bg-bg p-2 text-center">
+        <StatCell label="received" value={counts.received ?? 0} color="text-muted" hint="queued for next batch" />
+        <StatCell label="batched" value={counts.batched ?? 0} color="text-yellow-300" hint="bundled, awaiting Arc" />
+        <StatCell label="confirmed" value={counts.confirmed ?? 0} color="text-accent" hint="onchain hash set" />
+        <StatCell label="completed" value={counts.completed ?? 0} color="text-green-400" hint="finalized" />
+        <StatCell label="failed" value={counts.failed ?? 0} color="text-red-400" hint="testnet bundler err" />
+      </div>
+      <p className="mt-2 font-mono text-[10px] text-muted">
+        Circle testnet batcher runs ~every 2h at the top of the hour (e.g. 19:00, 21:00, 23:00 UTC).
+        Transfers move <span className="text-muted">received</span> → <span className="text-yellow-300">batched</span> →
+        <span className="text-accent"> confirmed</span> in ~4-6h total on testnet.
+      </p>
       <div className="mt-4">
         <div className="flex items-center justify-between">
           <div className="font-mono text-[10px] uppercase text-muted">
