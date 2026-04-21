@@ -4,11 +4,20 @@ Chrome MV3 extension — pay-per-second content meter on Arc testnet.
 
 ## Load unpacked (dev mode)
 
-1. Open `chrome://extensions/`
-2. Enable **Developer mode** (top right)
-3. Click **Load unpacked**
-4. Select this `extension/` directory
-5. The Mtrly icon appears in your toolbar
+### Option A — download the prebuilt zip
+
+1. Download: https://circlearc-59513674.slonix.dev/mtrly-extension.zip
+2. Unzip to a directory of your choice
+3. Open `chrome://extensions/` → enable **Developer mode** → **Load unpacked** → select the unzipped folder
+
+### Option B — from the repo
+
+1. `git clone git@github.com:finecalex/mtrly.git`
+2. Open `chrome://extensions/`
+3. Enable **Developer mode** (top right)
+4. Click **Load unpacked**
+5. Select `mtrly/extension/`
+6. The Mtrly icon appears in your toolbar
 
 ## Using it
 

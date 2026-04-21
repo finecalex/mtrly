@@ -50,7 +50,10 @@ export default function Home() {
           </li>
           <li>
             <span className="font-mono text-accent">2.</span>{" "}
-            Install the Chrome extension from <span className="font-mono text-sm">mtrly/extension/</span> (load unpacked).
+            <a href="/mtrly-extension.zip" className="underline">Download the Chrome extension</a>
+            {" "}(or <span className="font-mono text-sm">git clone</span> and point to{" "}
+            <span className="font-mono text-sm">mtrly/extension/</span>), then{" "}
+            <span className="font-mono text-sm">chrome://extensions</span> → Developer mode → Load unpacked.
           </li>
           <li>
             <span className="font-mono text-accent">3.</span>{" "}

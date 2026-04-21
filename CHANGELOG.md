@@ -9,6 +9,10 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 ## [Unreleased]
 
 ### Added
+- **Phase 7.1 — Downloadable extension.** `web/public/mtrly-extension.zip` is now served as a static asset on the prod domain (`https://circlearc-59513674.slonix.dev/mtrly-extension.zip`). Landing page step 2 now has a direct download link so reviewers don't have to `git clone`.
+- `scripts/build-extension-zip.js` — Node+archiver script to regenerate the zip from `extension/` (run whenever extension source changes).
+- `extension/README.md` + `DEMO.md`: document both install paths — download-zip and git-clone.
+
 - **Phase 7 — Demo polish.** Landing page now has a "Try it in two minutes" walk-through linking to signup, demo article, and a pre-registered YouTube video, plus a Creator dashboard button.
 - `DEMO.md` — single-page hackathon demo guide: install → signup → top-up → YouTube tick → article blur/reveal → creator dashboard; includes the money-flow diagram and what-comes-next list.
 - `extension/README.md` — fleshed out: load-unpacked steps, video vs text UX, permissions rationale ("we only contact circlearc-59513674.slonix.dev — no browsing-history exfil"), package command for store submission.
