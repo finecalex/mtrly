@@ -9,6 +9,10 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 ## [Unreleased]
 
 ### Added
+- **Phase 7 — Demo polish.** Landing page now has a "Try it in two minutes" walk-through linking to signup, demo article, and a pre-registered YouTube video, plus a Creator dashboard button.
+- `DEMO.md` — single-page hackathon demo guide: install → signup → top-up → YouTube tick → article blur/reveal → creator dashboard; includes the money-flow diagram and what-comes-next list.
+- `extension/README.md` — fleshed out: load-unpacked steps, video vs text UX, permissions rationale ("we only contact circlearc-59513674.slonix.dev — no browsing-history exfil"), package command for store submission.
+
 - **Phase 5 — Creator dashboard.** `/dashboard` now shows live balance, lifetime earnings (creator&apos;s 80% share), registered URL count, content table with per-URL sessions/viewers/earnings, and the 20 most recent payments. Polls `/api/creator/earnings` every 5s.
 - `GET /api/creator/earnings` — aggregates `Payment` records via `$sum`/`$count` and scales amounts by `PRICING.split.creator` so the UI shows the creator&apos;s net take (not gross viewer spend).
 - Inline "register new content" form on the dashboard — POSTs to `/api/creator/content`.
