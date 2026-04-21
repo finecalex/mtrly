@@ -8,6 +8,9 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 
 ## [Unreleased]
 
+### Security
+- **Extension permission hardening.** Dropped `storage`, `scripting`, and `cookies` from `manifest.json` — all three were declared but unused (auth rides session cookies via `credentials: "include"`, which needs no permission). Removed dead `getToken`/`setToken` handlers from `background.js`. Kept only `tabs` (for `tabs.onRemoved` session cleanup) and `activeTab` (so the popup can open `/balance` / `/auth/login`). Host permissions (`<all_urls>`) unchanged — required for content-script URL matching. Rebuilt `web/public/mtrly-extension.zip`.
+
 ### Added
 - **Phase 7.2 — Live activity ticker on landing page.** New `GET /api/activity` public endpoint aggregates `Payment` rows with `nanopaymentTxId != null` (total count, confirmed count, USDC volume + 25 most recent). New `web/components/LiveTicker.tsx` client component polls every 5s and renders 3 stat cards + 10 most-recent list with "onchain ↗" links to arcscan (or "batching…" while Circle confirms). Injected into `/` above the footer as a "Live onchain activity" section — lets hackathon reviewers watch real Arc-testnet txs land in realtime without signing in.
 - **Phase 7.2 — Creator withdraw flow.** New `POST /api/creator/withdraw` — authenticated, validates amount (max 100 USDC) + optional `0x…` destination, defaults to the creator's `circleWalletAddr`. Calls `GatewayClient.withdraw()` → produces 1 real mint tx on Arc, decrements `Balance.amountUsdc`, logs `BalanceTransaction(type="withdraw", referenceId="onchain:<hash>")`. Returns `mintTxHash + arcscan url`. Dashboard now has a "Withdraw to wallet" form above "Register new content" showing amount/destination inputs + success card with arcscan link.

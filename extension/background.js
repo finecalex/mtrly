@@ -89,15 +89,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type === "getToken") {
-    chrome.storage.local.get(["token"], (res) => sendResponse({ token: res.token ?? null }));
-    return true;
-  }
-
-  if (msg.type === "setToken") {
-    chrome.storage.local.set({ token: msg.token }, () => sendResponse({ ok: true }));
-    return true;
-  }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
