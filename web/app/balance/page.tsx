@@ -43,6 +43,8 @@ export default function BalancePage() {
   const [txs, setTxs] = useState<TxItem[]>([]);
   const [gw, setGw] = useState<GatewayStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   async function refresh() {
     const [meRes, balRes, gwRes] = await Promise.all([
@@ -54,6 +56,27 @@ export default function BalancePage() {
     if (balRes && !balRes.error) setTxs(balRes.transactions ?? []);
     setGw(gwRes);
     setLoading(false);
+  }
+
+  async function syncFromWallet() {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch("/api/balance/sync", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setSyncMsg(data.error ?? "sync_failed");
+      } else if (Number(data.credited) > 0) {
+        setSyncMsg(`Credited $${Number(data.credited).toFixed(4)} from onchain wallet.`);
+      } else {
+        setSyncMsg(`Already up to date. Onchain: $${Number(data.onchainUsdc).toFixed(4)}.`);
+      }
+      await refresh();
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : "sync_failed");
+    } finally {
+      setSyncing(false);
+    }
   }
 
   useEffect(() => {
@@ -96,11 +119,21 @@ export default function BalancePage() {
           {me.walletAddress ?? "— wallet provisioning pending —"}
         </div>
         <p className="mt-3 text-xs text-muted">
-          Send USDC on Arc Testnet to this address. Grab test USDC from{" "}
+          Send USDC on Arc Testnet to this address (get test USDC from{" "}
           <a href="https://faucet.circle.com" target="_blank" rel="noreferrer" className="underline">
             faucet.circle.com
-          </a>. Balance refreshes after on-chain settlement (Phase 2).
+          </a>), then click <b>Sync from wallet</b> to credit the delta to your Mtrly balance.
         </p>
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={syncFromWallet}
+            disabled={syncing || !me.walletAddress}
+            className="rounded border border-accent bg-accent px-4 py-2 font-mono text-xs text-bg hover:opacity-90 disabled:opacity-40"
+          >
+            {syncing ? "Syncing…" : "Sync from wallet"}
+          </button>
+          {syncMsg && <span className="font-mono text-xs text-muted">{syncMsg}</span>}
+        </div>
       </section>
 
       <section className="mt-8">

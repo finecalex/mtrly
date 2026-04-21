@@ -8,6 +8,10 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 
 ## [Unreleased]
 
+### Added
+- **Phase 2 (belated) — Onchain → ledger sync.** `POST /api/balance/sync` reads the authenticated user's `circleWalletAddr` USDC balance on Arc Testnet (viem `balanceOf` on `0x3600…0000`) and credits the positive delta to their internal `Balance`. Tracked via `BalanceTransaction(type="deposit", referenceId="onchain-sync:<ts>")`, so re-running is idempotent — we only credit amounts beyond what's already been synced. `/balance` page has a new "Sync from wallet" button that calls it. Fixes the long-standing gap where `/balance` told users "Balance refreshes after on-chain settlement" but nothing actually reconciled onchain deposits.
+- **`/api/admin/grant-balance` now accepts `walletAddress`** in addition to `email`, for demo top-ups when only the Circle wallet address is known.
+
 ### Security
 - **Extension permission hardening.** Dropped `storage`, `scripting`, and `cookies` from `manifest.json` — all three were declared but unused (auth rides session cookies via `credentials: "include"`, which needs no permission). Removed dead `getToken`/`setToken` handlers from `background.js`. Kept only `tabs` (for `tabs.onRemoved` session cleanup) and `activeTab` (so the popup can open `/balance` / `/auth/login`). Host permissions (`<all_urls>`) unchanged — required for content-script URL matching. Rebuilt `web/public/mtrly-extension.zip`.
 

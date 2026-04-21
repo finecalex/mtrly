@@ -4,9 +4,12 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 
 const schema = z.object({
-  email: z.string().email(),
+  email: z.string().email().optional(),
+  walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
   amountUsdc: z.number().positive().max(1000),
   note: z.string().max(200).optional(),
+}).refine((v) => v.email || v.walletAddress, {
+  message: "email_or_walletAddress_required",
 });
 
 export async function POST(req: NextRequest) {
@@ -21,10 +24,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_input", issues: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { email, amountUsdc, note } = parsed.data;
+  const { email, walletAddress, amountUsdc, note } = parsed.data;
   const amount = new Prisma.Decimal(amountUsdc.toFixed(8));
 
-  const user = await db.user.findUnique({ where: { email } });
+  const user = email
+    ? await db.user.findUnique({ where: { email } })
+    : await db.user.findFirst({
+        where: {
+          OR: [
+            { circleWalletAddr: { equals: walletAddress, mode: "insensitive" } },
+            { walletAddress: { equals: walletAddress, mode: "insensitive" } },
+          ],
+        },
+      });
   if (!user) return NextResponse.json({ error: "user_not_found" }, { status: 404 });
 
   await db.$transaction([
@@ -47,7 +59,8 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    email,
+    userId: user.id,
+    email: user.email,
     credited: amount.toString(),
     balance: balance?.amountUsdc.toString() ?? "0",
   });
