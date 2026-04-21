@@ -67,3 +67,8 @@ coverage/
 *.db
 tmp/
 .tmp/
+
+# === TEST / DEBUG ARTIFACTS ===
+.playwright-mcp/
+*.png
+!extension/icons/*.png

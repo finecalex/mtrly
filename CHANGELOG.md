@@ -9,6 +9,14 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 ## [Unreleased]
 
 ### Added
+- **Phase 5 — Creator dashboard.** `/dashboard` now shows live balance, lifetime earnings (creator&apos;s 80% share), registered URL count, content table with per-URL sessions/viewers/earnings, and the 20 most recent payments. Polls `/api/creator/earnings` every 5s.
+- `GET /api/creator/earnings` — aggregates `Payment` records via `$sum`/`$count` and scales amounts by `PRICING.split.creator` so the UI shows the creator&apos;s net take (not gross viewer spend).
+- Inline "register new content" form on the dashboard — POSTs to `/api/creator/content`.
+- Verified end-to-end on prod with Playwright: Creator One dashboard correctly renders $0.017333 balance, 5 payments across 2 URLs (YouTube + demo article).
+
+### Changed
+- `prisma/schema.prisma`: add `Payment.content` back-relation to `ContentUrl` (fields `contentId`, `onDelete: SetNull`) so earnings queries can `include: { content: {...} }`.
+
 - **Phase 4 — Text paragraph paywall.** For `kind = web` content, the extension blurs every paragraph past the first (first is free per PRD), watches scroll position via `IntersectionObserver`, and when a paragraph is ≥50% in viewport for 3 consecutive seconds it calls `/api/billing/tick` — unblurring the paragraph on 200, showing the insufficient-balance overlay on 402.
 - `GET /api/consumption?url=...` — returns the viewer&apos;s `unitsConsumed` for a given URL so the extension can mark already-paid paragraphs as free on refresh (no re-billing).
 - Extension background: generic `fetch` message handler forwards arbitrary GET calls with credentials, used by the text flow.

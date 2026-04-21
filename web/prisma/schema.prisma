@@ -81,6 +81,7 @@ model ContentUrl {
 
   consumption    Consumption[]
   sessions       ViewSession[]
+  payments       Payment[]
 
   @@index([creatorId])
 }
@@ -120,6 +121,7 @@ model Payment {
   toUserId         Int
   toUser           User     @relation("PaymentTo", fields: [toUserId], references: [id], onDelete: Cascade)
   contentId        Int?
+  content          ContentUrl? @relation(fields: [contentId], references: [id], onDelete: SetNull)
   amountUsdc       Decimal  @db.Decimal(20, 8)
   nanopaymentTxId  String?
   settledOnchain   Boolean  @default(false)
