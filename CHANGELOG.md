@@ -9,6 +9,14 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 ## [Unreleased]
 
 ### Added
+- **Phase 6b — Per-tick x402 onchain settlement.** Each successful offchain tick now fires a real Circle Gateway batched payment from `MTRLY_DEMO_BUYER_KEY` → `PLATFORM_WALLET_ADDRESS` on Arc Testnet. Once Circle confirms, `Payment.nanopaymentTxId` + `settledOnchain=true` get stamped.
+- `web/lib/x402.ts` — Circle `BatchFacilitatorClient` singleton + `buildPaymentRequirements({priceDollars, payTo})` (caches Arc `verifyingContract` + USDC address via `/v1/x402/supported`). Handles the `PAYMENT-REQUIRED` / `Payment-Signature` / `PAYMENT-RESPONSE` base64 header dance.
+- `GET|POST /api/x402/tick?price=$0.00416` — Next.js App Router port of Circle's `createGatewayMiddleware`: returns 402 with batching-scheme requirements when no `payment-signature` header, else verifies + settles via Circle Gateway and returns the Arc tx hash.
+- `web/lib/gateway.ts` → `settleTickViaGateway({amountUsdc})` — server-side buyer calls `GatewayClient.pay(self/api/x402/tick)` so every tick produces a batched onchain transfer without blocking the extension's response.
+- `billing.applyTick`: after Prisma commit, fire-and-forget `settleTickViaGateway` → on Circle success, updates `Payment.nanopaymentTxId` + flips `settledOnchain`. Failures logged but don't affect offchain billing.
+- Dashboard → Recent payments list now shows per-row "onchain ↗" link (to `testnet.arcscan.app/tx/<hash>`) or "offchain" fallback; `GET /api/creator/earnings` emits `nanopaymentTxId`, `settledOnchain`, `explorerUrl` per row.
+- `web/package.json`: pin `@x402/core@^2.3.0` and `@x402/evm@^2.3.0` (required peers of `@circle-fin/x402-batching/server`).
+
 - **Phase 6a — Circle Gateway wiring.** `web/lib/gateway.ts` initializes `@circle-fin/x402-batching` `GatewayClient` on Arc Testnet using demo-buyer EOA `MTRLY_DEMO_BUYER_KEY`. Exposes `gatewayStatus()`, `gatewayDeposit(amt)`, `gatewayWithdraw(amt)`, and an `arcExplorerTx(hash)` helper.
 - `GET /api/gateway/status` — public: returns buyer EOA address, wallet + Gateway balances, and 10 most recent Gateway transfers filtered by our address (each with arcscan URL).
 - `POST /api/gateway/deposit` and `POST /api/gateway/withdraw` — admin-gated (`x-admin-setup-key`): each call produces 1 real onchain tx on Arc testnet (approval + deposit, or withdraw-mint). Returns tx hashes + explorer links.

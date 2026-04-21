@@ -18,6 +18,9 @@ type Earnings = {
     createdAt: string;
     fromDisplayName: string | null;
     content: { title: string | null; normalizedUrl: string; kind: string } | null;
+    nanopaymentTxId: string | null;
+    settledOnchain: boolean;
+    explorerUrl: string | null;
   }>;
 };
 
@@ -200,10 +203,25 @@ export default function DashboardPage() {
         ) : (
           <ul className="mt-3 space-y-1 font-mono text-xs">
             {earnings.recent.map((p) => (
-              <li key={p.id} className="flex items-center justify-between border-b border-border py-2">
-                <span className="text-muted">{new Date(p.createdAt).toLocaleString()}</span>
-                <span>{p.content?.title ?? p.content?.normalizedUrl ?? "—"}</span>
-                <span className="text-fg">+${fmt(p.amountUsdc)}</span>
+              <li key={p.id} className="flex items-center justify-between gap-3 border-b border-border py-2">
+                <span className="text-muted shrink-0">{new Date(p.createdAt).toLocaleString()}</span>
+                <span className="truncate">{p.content?.title ?? p.content?.normalizedUrl ?? "—"}</span>
+                <span className="flex items-center gap-3 shrink-0">
+                  {p.explorerUrl ? (
+                    <a
+                      href={p.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={p.nanopaymentTxId ?? ""}
+                      className="text-accent hover:underline"
+                    >
+                      onchain ↗
+                    </a>
+                  ) : (
+                    <span className="text-muted">offchain</span>
+                  )}
+                  <span className="text-fg">+${fmt(p.amountUsdc)}</span>
+                </span>
               </li>
             ))}
           </ul>

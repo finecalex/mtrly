@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "./db";
 import { PRICING } from "./config";
 import { getPlatformUserId } from "./platform";
+import { gatewayConfigured, settleTickViaGateway } from "./gateway";
 
 export type TickKind = "youtube" | "web";
 
@@ -43,9 +44,10 @@ export async function applyTick(params: {
 
   const platformUserId = await getPlatformUserId();
   const creatorId = session.content.creatorId;
+  let paymentIdForSettle: number | null = null;
 
   try {
-    return await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       const viewerBalance = await tx.balance.findUnique({ where: { userId: viewerId } });
       if (!viewerBalance || new Prisma.Decimal(viewerBalance.amountUsdc).lt(amount)) {
         throw new InsufficientBalanceError();
@@ -75,6 +77,7 @@ export async function applyTick(params: {
           settledOnchain: false,
         },
       });
+      paymentIdForSettle = payment.id;
 
       await tx.balanceTransaction.createMany({
         data: [
@@ -133,6 +136,26 @@ export async function applyTick(params: {
         unitsConsumed: consumption.unitsConsumed,
       };
     });
+
+    if (paymentIdForSettle !== null && gatewayConfigured()) {
+      const pid = paymentIdForSettle;
+      const amt = parseFloat(amount.toString());
+      void (async () => {
+        try {
+          const settle = await settleTickViaGateway({ amountUsdc: amt });
+          if (settle.transaction) {
+            await db.payment.update({
+              where: { id: pid },
+              data: { nanopaymentTxId: settle.transaction, settledOnchain: true },
+            });
+          }
+        } catch (err) {
+          console.error(`[x402] onchain settle failed for payment ${pid}:`, err);
+        }
+      })();
+    }
+
+    return result;
   } catch (e) {
     if (e instanceof InsufficientBalanceError) {
       return { ok: false, reason: "insufficient" };
