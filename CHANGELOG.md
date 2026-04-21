@@ -8,6 +8,13 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 
 ## [Unreleased]
 
+### Added
+- **Phase 6a — Circle Gateway wiring.** `web/lib/gateway.ts` initializes `@circle-fin/x402-batching` `GatewayClient` on Arc Testnet using demo-buyer EOA `MTRLY_DEMO_BUYER_KEY`. Exposes `gatewayStatus()`, `gatewayDeposit(amt)`, `gatewayWithdraw(amt)`, and an `arcExplorerTx(hash)` helper.
+- `GET /api/gateway/status` — public: returns buyer EOA address, wallet + Gateway balances, and 10 most recent Gateway transfers filtered by our address (each with arcscan URL).
+- `POST /api/gateway/deposit` and `POST /api/gateway/withdraw` — admin-gated (`x-admin-setup-key`): each call produces 1 real onchain tx on Arc testnet (approval + deposit, or withdraw-mint). Returns tx hashes + explorer links.
+- `/balance` page now has a "Circle Nanopayments · Gateway" section showing live Gateway balance, EOA balance, and recent batched transfers with arcscan links.
+- `PLATFORM_WALLET_ADDRESS` — public seller address for upcoming x402 per-tick settlement (Phase 6b).
+
 ### Fixed
 - `web/Dockerfile`: add `RUN chmod -R a+rX /app` after COPY-from-build so files with restrictive host perms (umask 077 → 0600 on `package.json`) become readable by the `nextjs` runtime user. Container was crash-looping with `EACCES: permission denied, open '/app/package.json'` after rebuild.
 

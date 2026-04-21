@@ -20,18 +20,39 @@ type TxItem = {
   reference: string | null;
 };
 
+type GatewayStatus = {
+  ok: boolean;
+  address?: string;
+  chain?: string;
+  gateway?: { availableFormatted: string; totalFormatted: string };
+  wallet?: { balanceFormatted: string };
+  transfers?: Array<{
+    id: string;
+    amount: string;
+    status: string;
+    fromAddress: string;
+    toAddress: string;
+    createdAt: string;
+    explorerUrl?: string;
+  }>;
+  error?: string;
+};
+
 export default function BalancePage() {
   const [me, setMe] = useState<Me | null>(null);
   const [txs, setTxs] = useState<TxItem[]>([]);
+  const [gw, setGw] = useState<GatewayStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
   async function refresh() {
-    const [meRes, balRes] = await Promise.all([
+    const [meRes, balRes, gwRes] = await Promise.all([
       fetch("/api/auth/me").then((r) => r.json()),
       fetch("/api/balance/status").then((r) => r.json()).catch(() => null),
+      fetch("/api/gateway/status").then((r) => r.json()).catch(() => null),
     ]);
     setMe(meRes.user);
     if (balRes && !balRes.error) setTxs(balRes.transactions ?? []);
+    setGw(gwRes);
     setLoading(false);
   }
 
@@ -98,6 +119,58 @@ export default function BalancePage() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="mt-10 rounded border border-border bg-surface p-5">
+        <div className="flex items-baseline justify-between">
+          <div className="font-mono text-xs uppercase text-muted">Circle Nanopayments · Gateway</div>
+          <div className="font-mono text-[10px] text-muted">{gw?.chain ?? "—"}</div>
+        </div>
+        {!gw?.ok ? (
+          <p className="mt-3 text-sm text-muted">
+            Gateway not configured on this deploy (awaiting `MTRLY_DEMO_BUYER_KEY` + testnet funding).
+          </p>
+        ) : (
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="font-mono text-[10px] uppercase text-muted">Gateway balance</div>
+                <div className="mt-1 font-mono text-xl">${gw.gateway?.availableFormatted ?? "0"}</div>
+                <div className="font-mono text-[10px] text-muted">available · gasless</div>
+              </div>
+              <div>
+                <div className="font-mono text-[10px] uppercase text-muted">EOA wallet</div>
+                <div className="mt-1 font-mono text-xl">${gw.wallet?.balanceFormatted ?? "0"}</div>
+                <div className="break-all font-mono text-[10px] text-muted">{gw.address}</div>
+              </div>
+            </div>
+            <div className="mt-4">
+              <div className="font-mono text-[10px] uppercase text-muted">Recent Gateway transfers</div>
+              {(!gw.transfers || gw.transfers.length === 0) ? (
+                <div className="mt-2 rounded border border-dashed border-border p-3 text-center text-xs text-muted">
+                  No Gateway transfers yet.
+                </div>
+              ) : (
+                <ul className="mt-2 divide-y divide-border rounded border border-border">
+                  {gw.transfers.map((t) => (
+                    <li key={t.id} className="px-3 py-2 font-mono text-[11px]">
+                      <div className="flex justify-between">
+                        <span className="text-muted">{t.status}</span>
+                        <span>${t.amount}</span>
+                        <span className="text-muted">{new Date(t.createdAt).toLocaleString()}</span>
+                      </div>
+                      {t.explorerUrl && (
+                        <a href={t.explorerUrl} target="_blank" rel="noreferrer" className="text-accent underline">
+                          arcscan ↗
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </>
         )}
       </section>
 
