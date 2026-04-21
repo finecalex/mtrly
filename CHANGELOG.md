@@ -8,6 +8,9 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 
 ## [Unreleased]
 
+### Fixed
+- **Gateway transfer amount was rendered as raw USDC base-units** ("$5000" instead of "$0.005") on `/balance`. `/api/gateway/status` now returns `amount` as a dollar-string ("0.005000") and keeps base-units under `amountBaseUnits`. UI re-labeled to make it explicit that this section shows the **platform demo-buyer's** outbound batching transfers, not the logged-in user's wallet. Failed transfers hidden behind a toggle + explanatory note that failed = Circle testnet bundler error and funds are returned to Gateway balance (no USDC lost).
+
 ### Added
 - **Phase 2 (belated) — Onchain → ledger sync.** `POST /api/balance/sync` reads the authenticated user's `circleWalletAddr` USDC balance on Arc Testnet (viem `balanceOf` on `0x3600…0000`) and credits the positive delta to their internal `Balance`. Tracked via `BalanceTransaction(type="deposit", referenceId="onchain-sync:<ts>")`, so re-running is idempotent — we only credit amounts beyond what's already been synced. `/balance` page has a new "Sync from wallet" button that calls it. Fixes the long-standing gap where `/balance` told users "Balance refreshes after on-chain settlement" but nothing actually reconciled onchain deposits.
 - **`/api/admin/grant-balance` now accepts `walletAddress`** in addition to `email`, for demo top-ups when only the Circle wallet address is known.
