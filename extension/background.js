@@ -34,6 +34,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  if (msg.type === "fetch") {
+    apiFetch(msg.path, msg.init || {})
+      .then(({ status, data }) => sendResponse({ status, ...data }))
+      .catch((e) => sendResponse({ status: 0, error: e.message }));
+    return true;
+  }
+
   if (msg.type === "sessionStart") {
     apiFetch("/api/session/start", {
       method: "POST",

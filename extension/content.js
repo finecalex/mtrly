@@ -217,7 +217,129 @@
     if (matchRes.kind === "youtube") {
       const video = await waitForVideo();
       if (video) attachVideoListeners(video);
+    } else if (matchRes.kind === "web") {
+      await setupTextPaywall(matchRes);
     }
+  }
+
+  async function setupTextPaywall(match) {
+    const DWELL_MS = 3000;
+    const FREE_PARAGRAPHS = 1;
+
+    const consumptionRes = await sendMessage({
+      type: "fetch",
+      path: `/api/consumption?url=${encodeURIComponent(window.location.href)}`,
+    });
+    const alreadyPaidCount = Number(consumptionRes?.unitsConsumed ?? 0);
+    const paidIdxSet = new Set();
+    for (let i = 0; i < alreadyPaidCount; i++) paidIdxSet.add(i + FREE_PARAGRAPHS);
+
+    const paragraphs = findParagraphs();
+    if (paragraphs.length === 0) return;
+
+    paragraphs.forEach((p, i) => {
+      if (i < FREE_PARAGRAPHS || paidIdxSet.has(i)) {
+        p.dataset.mtrlyParagraph = "free";
+        return;
+      }
+      blurParagraph(p, i);
+    });
+
+    const total = paragraphs.length;
+    updateTextPanel({ total, paid: paidIdxSet.size + FREE_PARAGRAPHS });
+
+    const dwellTimers = new Map();
+
+    const io = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const el = entry.target;
+        const idx = Number(el.dataset.mtrlyIdx);
+        if (el.dataset.mtrlyState === "unlocked") continue;
+
+        if (entry.intersectionRatio > 0.5) {
+          if (dwellTimers.has(idx)) continue;
+          const t = setTimeout(async () => {
+            dwellTimers.delete(idx);
+            await unlockParagraph(el, idx, match);
+          }, DWELL_MS);
+          dwellTimers.set(idx, t);
+        } else {
+          const t = dwellTimers.get(idx);
+          if (t) {
+            clearTimeout(t);
+            dwellTimers.delete(idx);
+          }
+        }
+      }
+    }, { threshold: [0, 0.5, 1] });
+
+    paragraphs.forEach((p) => { if (p.dataset.mtrlyState === "locked") io.observe(p); });
+
+    async function unlockParagraph(el, idx, match) {
+      const sid = await ensureSession();
+      if (!sid) return;
+
+      const res = await sendMessage({ type: "tick", sessionId: sid });
+      if (res?.status === 402) {
+        showBlockingOverlay("insufficient");
+        return;
+      }
+      if (!res?.ok) return;
+
+      el.dataset.mtrlyState = "unlocked";
+      el.classList.remove("mtrly-blurred");
+      const badge = el.querySelector(".mtrly-paragraph-badge");
+      if (badge) badge.remove();
+      io.unobserve(el);
+      spent = Number(res.totalSpent ?? spent);
+      lastBalance = res.balance;
+      paidIdxSet.add(idx);
+      updateTextPanel({ total, paid: paidIdxSet.size + FREE_PARAGRAPHS });
+      updatePanel({ balance: res.balance, spent, status: "playing" });
+    }
+  }
+
+  function findParagraphs() {
+    const containers = [
+      document.querySelector("article"),
+      document.querySelector("main"),
+      document.querySelector('[role="main"]'),
+      document.body,
+    ].filter(Boolean);
+
+    for (const c of containers) {
+      const ps = Array.from(c.querySelectorAll("p"))
+        .filter((p) => p.textContent && p.textContent.trim().length > 80);
+      if (ps.length >= 2) return ps;
+    }
+    return [];
+  }
+
+  function blurParagraph(el, idx) {
+    el.dataset.mtrlyIdx = String(idx);
+    el.dataset.mtrlyState = "locked";
+    el.classList.add("mtrly-blurred");
+    if (!el.querySelector(".mtrly-paragraph-badge")) {
+      const badge = document.createElement("span");
+      badge.className = "mtrly-paragraph-badge";
+      badge.textContent = "mtrly · $0.005";
+      el.appendChild(badge);
+    }
+  }
+
+  function updateTextPanel({ total, paid }) {
+    const panel = document.getElementById("mtrly-panel");
+    if (!panel) return;
+    let textRow = document.getElementById("mtrly-text-stats");
+    if (!textRow) {
+      textRow = document.createElement("div");
+      textRow.className = "mtrly-row";
+      textRow.id = "mtrly-text-stats";
+      textRow.innerHTML = `<span>Paragraphs</span><b id="mtrly-text-stats-val">—</b>`;
+      panel.appendChild(textRow);
+    }
+    const val = document.getElementById("mtrly-text-stats-val");
+    if (val) val.textContent = `${paid}/${total}`;
   }
 
   bootstrap(window.location.href);
