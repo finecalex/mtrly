@@ -77,3 +77,53 @@ Always stage files explicitly (`git add PRD.md HACKATHON_BRIEF.md`) — never `g
 - Hackathon runs Apr 20–26, 2026. Code authored before Apr 20 is draft/design only; implementation commits should land during the window.
 - Don't invent Circle API behavior — cross-check against `TECH_REFERENCE.md` and Circle docs.
 - For UI/UX work, respect the "Mtrly" identity: meter metaphor, continuous consumption, minimal.
+
+---
+
+## 📝 CHANGELOG — MANDATORY WITH EVERY COMMIT
+
+**Every commit MUST update `CHANGELOG.md`.** No exceptions. Stage the changelog update in the same commit as the code change — never in a separate "update changelog" commit.
+
+### Format (Keep a Changelog, SemVer-ish)
+
+```markdown
+## [Unreleased]
+
+### Added
+- New feature X (PRD §Y)
+
+### Changed
+- Reworked Z to use new Circle SDK
+
+### Fixed
+- Billing tick off-by-one at video end
+
+### Removed
+- Deprecated mock-payment path
+```
+
+### Rules
+- One entry per commit, written before `git commit`.
+- Group by: `Added`, `Changed`, `Fixed`, `Removed`, `Security`, `Docs`.
+- One short line per change — link PRD section / issue / file when relevant.
+- When cutting a release, rename `[Unreleased]` → `[vX.Y.Z] — YYYY-MM-DD` and start a fresh `[Unreleased]` block on top.
+- If the commit is docs-only, still log it under `Docs`.
+- If you ever run `git commit` without updating `CHANGELOG.md`, stop, amend (or add follow-up commit) with the changelog entry before pushing.
+
+---
+
+## 🚀 AUTO-DEPLOY TO PROD ON EVERY COMMIT TO `main`
+
+**Every push to `main` automatically releases to production.** There is no staging gate between `main` and prod.
+
+### Implications — treat as hard rules
+- **No direct commits to `main` for experimental/WIP work.** Use a feature branch + PR (or at minimum a local branch that is reviewed before merge).
+- **Every commit must be deploy-safe:** builds pass, tests pass, no half-finished features, no secrets, no local-only config, no `console.log`/`dbg!` spam.
+- **Breaking changes / migrations** require a plan written to the commit body (what breaks, rollback path). Don't push a destructive migration without user sign-off.
+- **Secrets must come from env / secret manager in prod** — never commit a `.env` "just to test deploy" (see pre-push scan above).
+- **Rollback plan:** if a push breaks prod, the fastest path is usually `git revert <sha> && git push` — NOT force-pushing over `main`. Force-pushing `main` is forbidden unless the user explicitly approves it.
+- **Before pushing to `main`:** confirm to the user "About to push to main — this will auto-deploy to prod. OK?" unless the change is trivially safe (docs/changelog only) and the user has pre-authorized this push.
+
+### CI/CD (to be wired up)
+- Deploy pipeline: TBD — document the actual trigger (GitHub Actions workflow / Vercel / etc.) here as soon as it's set up.
+- Until CI is wired, "auto-deploy" is a convention: treat every `main` commit as if it WILL deploy, even if the pipeline isn't live yet.
