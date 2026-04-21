@@ -9,6 +9,18 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 ## [Unreleased]
 
 ### Added
+- **Phase 3 — Video extension flow.** Chrome extension now detects YouTube `<video>` elements, drives the billing loop, and paywalls playback per-second.
+- Extension: listens to `play`/`pause`/`ended` on the video element; starts a session on first play, ticks every 5s via `chrome.runtime.sendMessage` → background → `/api/billing/tick`; on HTTP 402 pauses the video and shows a blocking overlay linking to `/balance`; on 401 shows a "Sign in" overlay linking to `/auth/login?ext=1`.
+- Extension background: added `sessionStart`, `tick`, `sessionEnd`, `me` message handlers; tracks `sessionId` per tab; cleans up on `tabs.onRemoved`; all API calls use `credentials: "include"`.
+- Extension panel now shows live balance, cumulative spend for this view, rate, and creator name; status dot reflects playing/paused/blocked.
+- SPA URL-change detection via `MutationObserver` so YouTube client-side navigation tears down the old session and re-bootstraps for the new video.
+- Popup reads `/api/auth/me` for display name + balance.
+- `web/middleware.ts` — CORS handler for `/api/*`: echoes back `chrome-extension://*` and `moz-extension://*` origins with `Access-Control-Allow-Credentials: true` and responds to preflights.
+
+### Changed
+- `lib/auth.ts`: session cookie `SameSite=none` (with `Secure`) so the extension's cross-origin fetch can include it.
+- Extension manifest: bump to 0.1.0; add `scripting` + `cookies` permissions; pin `https://circlearc-59513674.slonix.dev/*` in host_permissions.
+
 - **Phase 2 — Nanopayments Engine (offchain ledger).** Atomic Prisma-transaction billing with 80/20 creator/platform split, insufficient-balance rejection (HTTP 402), and cumulative consumption + unlock-threshold tracking per (viewer, content) pair.
 - `lib/billing.ts` — `applyTick({viewerId, sessionId})` runs debit + 80/20 split + payment log + consumption update + session tick advance inside a single `$transaction`; computes tick amount from `PRICING` based on content kind.
 - `lib/platform.ts` — `getPlatformUserId()` auto-seeds a singleton `platform@mtrly.local` account on first tick to receive the 20% platform fee.

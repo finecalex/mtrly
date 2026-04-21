@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Mtrly — Pay per second",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Pay-per-second content on any site. Powered by Circle Nanopayments on Arc.",
-  "permissions": ["storage", "tabs", "activeTab"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["storage", "tabs", "activeTab", "scripting", "cookies"],
+  "host_permissions": ["<all_urls>", "https://circlearc-59513674.slonix.dev/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
