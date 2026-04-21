@@ -15,10 +15,14 @@ known_hosts
 !.env.example
 !.env.sample
 
-# Circle credentials
+# Circle credentials + recovery files
 entity-secret*
 circle-api-key*
 CIRCLE_API_KEY*
+recovery*.dat
+*recovery*.dat
+entity-recovery*
+circle-recovery*
 
 # Generic secret patterns
 *.key
