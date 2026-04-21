@@ -1,0 +1,130 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  viewer
+  creator
+}
+
+enum ContentKind {
+  youtube
+  web
+}
+
+enum TxType {
+  deposit
+  withdraw
+  payment_out
+  payment_in
+  platform_fee
+}
+
+model User {
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  passwordHash      String
+  displayName       String?
+  role              UserRole  @default(viewer)
+
+  circleWalletId    String?   @unique
+  circleWalletAddr  String?   @unique
+  walletAddress     String?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  balance           Balance?
+  transactions      BalanceTransaction[]
+  contentUrls       ContentUrl[] @relation("CreatorContent")
+  consumption       Consumption[]
+  paymentsOut       Payment[]   @relation("PaymentFrom")
+  paymentsIn        Payment[]   @relation("PaymentTo")
+  sessions          ViewSession[]
+}
+
+model Balance {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountUsdc  Decimal  @default(0) @db.Decimal(20, 8)
+  updatedAt   DateTime @updatedAt
+}
+
+model BalanceTransaction {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        TxType
+  amountUsdc  Decimal  @db.Decimal(20, 8)
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model ContentUrl {
+  id             Int        @id @default(autoincrement())
+  creatorId      Int
+  creator        User       @relation("CreatorContent", fields: [creatorId], references: [id], onDelete: Cascade)
+  kind           ContentKind
+  rawUrl         String
+  normalizedUrl  String     @unique
+  title          String?
+  createdAt      DateTime   @default(now())
+
+  consumption    Consumption[]
+  sessions       ViewSession[]
+
+  @@index([creatorId])
+}
+
+model ViewSession {
+  id             String     @id @default(cuid())
+  viewerId       Int
+  viewer         User       @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  contentId      Int
+  content        ContentUrl @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  startedAt      DateTime   @default(now())
+  lastTickAt     DateTime?
+  totalSpent     Decimal    @default(0) @db.Decimal(20, 8)
+  tickCount      Int        @default(0)
+
+  @@index([viewerId, contentId])
+}
+
+model Consumption {
+  id              Int        @id @default(autoincrement())
+  viewerId        Int
+  viewer          User       @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  contentId       Int
+  content         ContentUrl @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  unitsConsumed   Int        @default(0)
+  totalPaidUsdc   Decimal    @default(0) @db.Decimal(20, 8)
+  isUnlocked      Boolean    @default(false)
+  lastAccessedAt  DateTime   @updatedAt
+
+  @@unique([viewerId, contentId])
+}
+
+model Payment {
+  id               Int      @id @default(autoincrement())
+  fromUserId       Int
+  fromUser         User     @relation("PaymentFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUserId         Int
+  toUser           User     @relation("PaymentTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  contentId        Int?
+  amountUsdc       Decimal  @db.Decimal(20, 8)
+  nanopaymentTxId  String?
+  settledOnchain   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([fromUserId, createdAt])
+  @@index([toUserId, createdAt])
+}

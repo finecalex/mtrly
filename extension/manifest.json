@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Mtrly — Pay per second",
+  "version": "0.0.1",
+  "description": "Pay-per-second content on any site. Powered by Circle Nanopayments on Arc.",
+  "permissions": ["storage", "tabs", "activeTab"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Mtrly"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["overlay.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["overlay.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

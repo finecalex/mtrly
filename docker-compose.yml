@@ -1,0 +1,69 @@
+networks:
+  app-network:
+    name: 59513674_circlearc_network
+    driver: bridge
+  proxy:
+    external: true
+
+volumes:
+  postgres-data:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: 59513674-circlearc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mtrly
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mtrly_dev_pw}
+      POSTGRES_DB: mtrly
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtrly -d mtrly"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: 59513674-circlearc-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://mtrly:${POSTGRES_PASSWORD:-mtrly_dev_pw}@postgres:5432/mtrly?schema=public
+      NEXT_PUBLIC_APP_URL: https://circlearc-59513674.slonix.dev
+      JWT_SECRET: ${JWT_SECRET}
+      CIRCLE_API_KEY: ${CIRCLE_API_KEY:-}
+      CIRCLE_ENTITY_SECRET: ${CIRCLE_ENTITY_SECRET:-}
+      PLATFORM_WALLET_PRIVATE_KEY: ${PLATFORM_WALLET_PRIVATE_KEY:-}
+      VIRTUAL_HOST: circlearc-59513674.slonix.dev
+      VIRTUAL_PORT: "3000"
+      LETSENCRYPT_HOST: circlearc-59513674.slonix.dev
+      LETSENCRYPT_EMAIL: admin@circlearc-59513674.slonix.dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+      - proxy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
