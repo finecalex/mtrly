@@ -6,6 +6,7 @@ type Earnings = {
   balanceUsdc: string;
   lifetimeEarnedUsdc: string;
   lifetimePaymentCount: number;
+  onchainSettledCount?: number;
   perContent: Array<{
     contentId: number | null;
     amountUsdc: string;
@@ -41,7 +42,7 @@ type Me = {
   email: string;
   displayName: string | null;
   role: string;
-  circleWalletAddr?: string | null;
+  walletAddress?: string | null;
 };
 
 export default function DashboardPage() {
@@ -150,9 +151,35 @@ export default function DashboardPage() {
 
       <section className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         <Card title="Balance (USDC)" value={`$${fmt(earnings?.balanceUsdc)}`} sub="Spendable + unclaimed" />
-        <Card title="Lifetime earned" value={`$${fmt(earnings?.lifetimeEarnedUsdc)}`} sub={`${earnings?.lifetimePaymentCount ?? 0} payments`} />
+        <Card
+          title="Lifetime earned"
+          value={`$${fmt(earnings?.lifetimeEarnedUsdc)}`}
+          sub={`${earnings?.lifetimePaymentCount ?? 0} payments · ${earnings?.onchainSettledCount ?? 0} onchain`}
+        />
         <Card title="Registered URLs" value={contents.length.toString()} sub="YouTube + web" />
       </section>
+
+      {me.walletAddress && (
+        <section className="mt-6 rounded border border-green-400/30 bg-green-400/5 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="font-mono text-[10px] uppercase text-green-400">Onchain settlement proof</div>
+              <div className="mt-1 font-mono text-xs text-muted">
+                Payouts to your wallet settle on Arc Testnet. All incoming batches are verifiable onchain.
+              </div>
+              <div className="mt-1 break-all font-mono text-[11px]">{me.walletAddress}</div>
+            </div>
+            <a
+              href={`https://testnet.arcscan.app/address/${me.walletAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded border border-green-400/50 px-3 py-2 font-mono text-[10px] uppercase text-green-400 hover:bg-green-400/10"
+            >
+              View wallet on arcscan ↗
+            </a>
+          </div>
+        </section>
+      )}
 
       <section className="mt-10">
         <h2 className="font-mono text-xs uppercase text-muted">Withdraw to wallet</h2>
@@ -173,7 +200,7 @@ export default function DashboardPage() {
           />
           <input
             type="text"
-            placeholder={me.circleWalletAddr ?? "0x… destination (optional)"}
+            placeholder={me.walletAddress ?? "0x… destination (optional)"}
             value={wdDest}
             onChange={(e) => setWdDest(e.target.value)}
             className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"

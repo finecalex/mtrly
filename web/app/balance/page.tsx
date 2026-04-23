@@ -36,6 +36,13 @@ type GatewayStatus = {
     explorerUrl?: string;
   }>;
   counts?: Record<string, number>;
+  completedStats?: {
+    count: number;
+    totalUsdc: string;
+    latestAt: string | null;
+    platformAddress: string;
+    platformExplorerUrl: string;
+  };
   error?: string;
 };
 
@@ -248,6 +255,34 @@ function GatewayPanel({ gw }: { gw: GatewayStatus }) {
         <StatCell label="completed" value={counts.completed ?? 0} color="text-green-400" hint="finalized" />
         <StatCell label="failed" value={counts.failed ?? 0} color="text-red-400" hint="testnet bundler err" />
       </div>
+      {gw.completedStats && gw.completedStats.count > 0 && (
+        <div className="mt-3 rounded border border-green-400/30 bg-green-400/5 p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="font-mono text-[10px] uppercase text-green-400">Onchain settlement proof</div>
+              <div className="mt-1 font-mono text-sm">
+                <span className="text-green-400 tabular-nums">{gw.completedStats.count}</span>{" "}
+                <span className="text-muted">nanopayments settled · </span>
+                <span className="tabular-nums">${gw.completedStats.totalUsdc}</span>{" "}
+                <span className="text-muted">USDC finalized on Arc</span>
+              </div>
+              {gw.completedStats.latestAt && (
+                <div className="mt-1 font-mono text-[10px] text-muted">
+                  latest: {new Date(gw.completedStats.latestAt).toLocaleString()}
+                </div>
+              )}
+            </div>
+            <a
+              href={gw.completedStats.platformExplorerUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 rounded border border-green-400/50 px-3 py-1.5 font-mono text-[10px] uppercase text-green-400 hover:bg-green-400/10"
+            >
+              View on arcscan ↗
+            </a>
+          </div>
+        </div>
+      )}
       <p className="mt-2 font-mono text-[10px] text-muted">
         Circle testnet batcher runs ~every 2h at the top of the hour (e.g. 19:00, 21:00, 23:00 UTC).
         Transfers move <span className="text-muted">received</span> → <span className="text-yellow-300">batched</span> →

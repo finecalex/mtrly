@@ -112,6 +112,34 @@ Always stage files explicitly (`git add PRD.md HACKATHON_BRIEF.md`) — never `g
 
 ---
 
+## 🔁 CIRCLE FEEDBACK — MANDATORY WITH EVERY COMMIT THAT TOUCHES CIRCLE STACK
+
+**Every commit that touches a Circle integration (Arc, USDC, Gateway, x402, CCTP, Wallets, Bridge Kit, Circle SDKs, arcscan, Developer Console, docs, faucet) MUST also update `circlefeedback.md`.** Stage the update in the same commit.
+
+### Why
+The hackathon submission form asks for detailed Circle product feedback across five fixed sections:
+  1. **Products Used** — which Circle products the team used
+  2. **Use Case** — why the team chose these products
+  3. **Successes** — what worked well during development
+  4. **Challenges** — issues / limitations encountered
+  5. **Recommendations** — how DX / scalability could be improved
+
+Writing good feedback at submission time from memory is impossible. Writing it at the moment of friction is effortless. The Product Feedback Incentive is $500 USDC; more importantly, detailed feedback is judged as a proxy for how seriously the team engaged with the stack.
+
+### Rules
+- Any code change that imports `@circle-fin/*`, calls a Circle API, touches `arcExplorer*`, edits x402 flow, or reacts to a Circle outage → update `circlefeedback.md`.
+- Pure refactors of Circle code still count — if behaviour changed, the SDK/DX experience likely did too.
+- Prefer **concrete** entries with dates, UUIDs, tx hashes, error messages, file paths. Vague "Gateway is cool" entries are useless at submission time.
+- Any time you hit a Circle bug / regression / confusing doc — log it under `Challenges` immediately, even if the work you're doing doesn't fix it.
+- Any time a Circle product surprises positively (clean API, good error message, fast recovery) — log it under `Successes`. These are what we cite in the pitch.
+- File layout is fixed: five top-level sections `Products Used`, `Use Case`, `Successes`, `Challenges`, `Recommendations`. Don't invent new sections — instead add numbered sub-items (e.g. `### 4.7 New friction X`).
+- On submission day, copy the best 2-3 entries from each section into the lablab.ai form — `circlefeedback.md` is the superset.
+
+### If you ever commit a Circle-related change without updating `circlefeedback.md`
+Stop, amend (or add follow-up commit) with the feedback entry before pushing. Same discipline as `CHANGELOG.md`.
+
+---
+
 ## 🚀 AUTO-DEPLOY TO PROD ON EVERY COMMIT TO `main`
 
 **Every push to `main` automatically releases to production.** There is no staging gate between `main` and prod.

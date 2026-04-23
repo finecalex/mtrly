@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { gatewayConfigured, gatewayStatus, arcExplorerTx, getGatewayClient } from "@/lib/gateway";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 type TransferRow = {
   id: string;
   amount: string;
@@ -62,12 +65,26 @@ export async function GET() {
     allRows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
     const transfers = allRows.slice(0, 25).map(mapTransfer);
 
+    const completedRows = perStatus.find((p) => p.status === "completed")?.rows ?? [];
+    const totalCompletedBase = completedRows.reduce(
+      (acc, r) => acc + (Number((r as { amount?: unknown }).amount) || 0),
+      0,
+    );
+    const completedStats = {
+      count: completedRows.length,
+      totalUsdc: (totalCompletedBase / 1_000_000).toFixed(6),
+      latestAt: completedRows[0]?.createdAt ?? null,
+      platformAddress: status.address,
+      platformExplorerUrl: `https://testnet.arcscan.app/address/${status.address}`,
+    };
+
     return NextResponse.json({
       ok: true,
       ...status,
       transfers,
       counts,
       latestByStatus: latestPerStatus,
+      completedStats,
     });
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: e?.message ?? String(e) }, { status: 500 });

@@ -33,6 +33,10 @@
       <div class="mtrly-row"><span>This view</span><b id="mtrly-spent">$0.00</b></div>
       <div class="mtrly-row"><span>Rate</span><b>$${match.price}/${match.unit}</b></div>
       <div class="mtrly-row"><span>Creator</span><b>${match.creator?.displayName ?? "—"}</b></div>
+      <div class="mtrly-footer">
+        <span class="mtrly-chain">Arc Testnet</span>
+        <a class="mtrly-proof" href="https://circlearc-59513674.slonix.dev/balance" target="_blank" rel="noreferrer">settlement proof ↗</a>
+      </div>
     `;
     document.documentElement.appendChild(panel);
   }

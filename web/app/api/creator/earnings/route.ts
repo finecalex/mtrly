@@ -15,12 +15,15 @@ export async function GET() {
   const uid = await currentUserId();
   if (!uid) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const [balance, totals, recent, perContent] = await Promise.all([
+  const [balance, totals, onchainSettled, recent, perContent] = await Promise.all([
     db.balance.findUnique({ where: { userId: uid } }),
     db.payment.aggregate({
       where: { toUserId: uid },
       _sum: { amountUsdc: true },
       _count: true,
+    }),
+    db.payment.count({
+      where: { toUserId: uid, settledOnchain: true },
     }),
     db.payment.findMany({
       where: { toUserId: uid },
@@ -53,6 +56,7 @@ export async function GET() {
     balanceUsdc: balance?.amountUsdc.toString() ?? "0",
     lifetimeEarnedUsdc: scale(totals._sum.amountUsdc?.toString()),
     lifetimePaymentCount: totals._count,
+    onchainSettledCount: onchainSettled,
     perContent: perContent.map((r) => ({
       contentId: r.contentId,
       amountUsdc: scale(r._sum.amountUsdc?.toString()),
