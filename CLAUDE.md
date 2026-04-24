@@ -152,6 +152,17 @@ Stop, amend (or add follow-up commit) with the feedback entry before pushing. Sa
 - **Rollback plan:** if a push breaks prod, the fastest path is usually `git revert <sha> && git push` — NOT force-pushing over `main`. Force-pushing `main` is forbidden unless the user explicitly approves it.
 - **Before pushing to `main`:** confirm to the user "About to push to main — this will auto-deploy to prod. OK?" unless the change is trivially safe (docs/changelog only) and the user has pre-authorized this push.
 
-### CI/CD (to be wired up)
-- Deploy pipeline: TBD — document the actual trigger (GitHub Actions workflow / Vercel / etc.) here as soon as it's set up.
-- Until CI is wired, "auto-deploy" is a convention: treat every `main` commit as if it WILL deploy, even if the pipeline isn't live yet.
+### Deploy mechanism — manual rebuild from the agent session
+Until CI is wired, the agent runs in the same shell that hosts the Docker daemon for prod, so "auto-deploy" is performed by the agent itself as a two-step chain after every `git push` to `main`:
+
+```bash
+docker compose build web
+docker compose up -d web
+```
+
+If the change touches non-`web` services (e.g. `postgres` init, new container), adjust the service list. Always wait for the container to come up healthy and verify with a `curl` against a relevant endpoint before reporting success.
+
+Rationale over a webhook / GitHub Actions runner: zero new infra, no webhook secret to manage, fully deterministic within the same agent turn, and the agent can verify the deploy in the same context.
+
+### Future CI (not yet set up)
+When CI is wired, document the trigger (GitHub Actions workflow / Vercel / etc.) here and remove the manual-rebuild step. Until then, agents MUST NOT skip the rebuild step, even for small changes — `git push` alone does not change prod.
