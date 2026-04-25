@@ -49,9 +49,14 @@ export default function DashboardPage() {
   const [me, setMe] = useState<Me | null | undefined>(undefined);
   const [earnings, setEarnings] = useState<Earnings | null>(null);
   const [contents, setContents] = useState<ContentItem[]>([]);
+  const [mode, setMode] = useState<"url" | "article">("url");
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [artTitle, setArtTitle] = useState("");
+  const [artDesc, setArtDesc] = useState("");
+  const [artBody, setArtBody] = useState("");
+  const [publishedArticle, setPublishedArticle] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -110,6 +115,7 @@ export default function DashboardPage() {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
+        mode: "url",
         url,
         title: title || undefined,
         description: description || undefined,
@@ -124,6 +130,34 @@ export default function DashboardPage() {
     setUrl("");
     setTitle("");
     setDescription("");
+    refresh();
+  }
+
+  async function addArticle(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(null);
+    setPublishedArticle(null);
+    setSubmitting(true);
+    const res = await fetch("/api/creator/content", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        mode: "article",
+        title: artTitle,
+        description: artDesc || undefined,
+        body: artBody,
+      }),
+    });
+    const data = await res.json();
+    setSubmitting(false);
+    if (!res.ok) {
+      setErr(data.error ?? "failed");
+      return;
+    }
+    setPublishedArticle(data.articleUrl ?? null);
+    setArtTitle("");
+    setArtDesc("");
+    setArtBody("");
     refresh();
   }
 
@@ -236,47 +270,122 @@ export default function DashboardPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="font-mono text-xs uppercase text-muted">Register new content</h2>
-        <p className="mt-1 text-xs text-muted">
-          For YouTube, the thumbnail is auto-detected. The URL stays hidden from logged-out
-          visitors so they can't skip the meter.
-        </p>
-        <form onSubmit={addContent} className="mt-3 flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <input
-              type="url"
-              placeholder="https://www.youtube.com/watch?v=…  or  https://your-article-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-              className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
+        <h2 className="font-mono text-xs uppercase text-muted">Publish new content</h2>
+        <div className="mt-3 flex gap-1 rounded-lg border border-border bg-surface p-1">
+          <button
+            type="button"
+            onClick={() => setMode("url")}
+            className={`flex-1 rounded-md px-4 py-1.5 text-sm transition-colors ${
+              mode === "url" ? "bg-bg text-fg" : "text-muted hover:text-fg"
+            }`}
+          >
+            Register external URL
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("article")}
+            className={`flex-1 rounded-md px-4 py-1.5 text-sm transition-colors ${
+              mode === "article" ? "bg-bg text-fg" : "text-muted hover:text-fg"
+            }`}
+          >
+            Write article on Mtrly
+          </button>
+        </div>
+
+        {mode === "url" ? (
+          <form onSubmit={addContent} className="mt-4 flex flex-col gap-3">
+            <p className="text-xs text-muted">
+              For YouTube, the thumbnail is auto-detected. The URL stays hidden from logged-out
+              visitors so they can&apos;t skip the meter.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=…  or  https://your-article-url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+                className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
+              />
+              <input
+                type="text"
+                placeholder="Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg sm:w-60"
+              />
+            </div>
+            <textarea
+              placeholder="Short description shown on previews (max 280 chars)…"
+              value={description}
+              onChange={(e) => setDescription(e.target.value.slice(0, 280))}
+              rows={2}
+              className="rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
             />
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-muted">{description.length}/280</span>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="rounded border border-accent bg-accent px-5 py-2 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
+              >
+                {submitting ? "…" : "Register URL"}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={addArticle} className="mt-4 flex flex-col gap-3">
+            <p className="text-xs text-muted">
+              Write directly on Mtrly. Each paragraph (separated by a blank line) is metered at
+              $0.005 per ~3-second dwell. The first paragraph is always free as a teaser; the rest
+              unlock as the reader pays.
+            </p>
             <input
               type="text"
-              placeholder="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg sm:w-60"
+              placeholder="Article title"
+              value={artTitle}
+              onChange={(e) => setArtTitle(e.target.value)}
+              required
+              className="rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
             />
-          </div>
-          <textarea
-            placeholder="Short description shown on previews (max 280 chars)…"
-            value={description}
-            onChange={(e) => setDescription(e.target.value.slice(0, 280))}
-            rows={2}
-            className="rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
-          />
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-muted">{description.length}/280</span>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded border border-accent bg-accent px-5 py-2 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
-            >
-              {submitting ? "…" : "Register"}
-            </button>
-          </div>
-        </form>
+            <textarea
+              placeholder="One-line description shown on previews (max 280 chars)…"
+              value={artDesc}
+              onChange={(e) => setArtDesc(e.target.value.slice(0, 280))}
+              rows={2}
+              className="rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
+            />
+            <textarea
+              placeholder="Article body. Separate paragraphs with a blank line. Markdown light: **bold**, *italic*, [link](https://…)."
+              value={artBody}
+              onChange={(e) => setArtBody(e.target.value.slice(0, 50000))}
+              rows={12}
+              required
+              className="rounded border border-border bg-surface px-3 py-2 text-sm leading-relaxed outline-none focus:border-fg"
+            />
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-muted">
+                {artBody.split(/\n\s*\n/).filter((p) => p.trim().length > 0).length} paragraphs ·{" "}
+                {artBody.length}/50000 chars
+              </span>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="rounded border border-accent bg-accent px-5 py-2 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
+              >
+                {submitting ? "…" : "Publish article"}
+              </button>
+            </div>
+            {publishedArticle && (
+              <div className="rounded border border-accent/30 bg-accent/5 p-3 text-sm">
+                Published →{" "}
+                <a href={publishedArticle} className="text-accent underline" target="_blank" rel="noreferrer">
+                  {publishedArticle}
+                </a>
+              </div>
+            )}
+          </form>
+        )}
         {err && <div className="mt-2 font-mono text-xs text-red-400">{err}</div>}
       </section>
 
@@ -299,17 +408,20 @@ export default function DashboardPage() {
               <tbody>
                 {contents.map((c) => {
                   const perRow = earnings?.perContent.find((p) => p.contentId === c.id);
+                  const isMtrly = c.kind === "mtrly";
+                  const href = isMtrly ? `/a/${c.id}` : c.rawUrl;
+                  const linkLabel = isMtrly ? `/a/${c.id}` : c.normalizedUrl;
                   return (
                     <tr key={c.id} className="border-t border-border">
                       <td className="px-4 py-3">
                         <div className="font-medium">{c.title ?? "—"}</div>
                         <a
-                          href={c.rawUrl}
-                          target="_blank"
+                          href={href}
+                          target={isMtrly ? "_self" : "_blank"}
                           rel="noopener noreferrer"
                           className="font-mono text-xs text-muted hover:text-fg"
                         >
-                          {c.normalizedUrl}
+                          {linkLabel}
                         </a>
                       </td>
                       <td className="px-4 py-3 font-mono text-xs">{c.kind}</td>

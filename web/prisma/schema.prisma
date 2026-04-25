@@ -16,6 +16,7 @@ enum UserRole {
 enum ContentKind {
   youtube
   web
+  mtrly
 }
 
 enum TxType {
@@ -86,6 +87,7 @@ model ContentUrl {
   title           String?
   description     String?    @db.VarChar(280)
   previewImageUrl String?
+  bodyMarkdown    String?    @db.Text
   createdAt       DateTime   @default(now())
 
   consumption    Consumption[]

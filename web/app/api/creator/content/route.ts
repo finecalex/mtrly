@@ -5,19 +5,34 @@ import { currentUserId } from "@/lib/auth";
 import { normalizeUrl } from "@/lib/url";
 import { previewImageForUrl } from "@/lib/youtube";
 
-const postSchema = z.object({
-  url: z.string().url(),
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(280).optional(),
-  previewImageUrl: z.string().url().optional().nullable(),
-});
+const postSchema = z.discriminatedUnion("mode", [
+  z.object({
+    mode: z.literal("url"),
+    url: z.string().url(),
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(280).optional(),
+    previewImageUrl: z.string().url().optional().nullable(),
+  }),
+  z.object({
+    mode: z.literal("article"),
+    title: z.string().min(1).max(200),
+    description: z.string().max(280).optional(),
+    body: z.string().min(20).max(50000),
+    previewImageUrl: z.string().url().optional().nullable(),
+  }),
+]);
 
 const patchSchema = z.object({
   id: z.number().int().positive(),
   title: z.string().min(1).max(200).optional().nullable(),
   description: z.string().max(280).optional().nullable(),
   previewImageUrl: z.string().url().optional().nullable(),
+  body: z.string().min(20).max(50000).optional().nullable(),
 });
+
+function publicAppUrl(): string {
+  return process.env.NEXT_PUBLIC_APP_URL ?? "https://circlearc-59513674.slonix.dev";
+}
 
 export async function GET() {
   const uid = await currentUserId();
@@ -41,6 +56,7 @@ export async function GET() {
       title: c.title,
       description: c.description,
       previewImageUrl: c.previewImageUrl,
+      bodyMarkdown: c.bodyMarkdown,
       createdAt: c.createdAt,
       sessions: c._count.sessions,
       viewers: c._count.consumption,
@@ -54,7 +70,30 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => null);
   const parsed = postSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_input", issues: parsed.error.flatten() }, { status: 400 });
+  }
+
+  if (parsed.data.mode === "article") {
+    const created = await db.contentUrl.create({
+      data: {
+        creatorId: uid,
+        kind: "mtrly",
+        rawUrl: "pending",
+        normalizedUrl: `__pending__article__${uid}__${Date.now()}__${Math.random().toString(36).slice(2, 8)}`,
+        title: parsed.data.title,
+        description: parsed.data.description ?? null,
+        previewImageUrl: parsed.data.previewImageUrl ?? null,
+        bodyMarkdown: parsed.data.body,
+      },
+    });
+    const canonical = `${publicAppUrl()}/a/${created.id}`;
+    const updated = await db.contentUrl.update({
+      where: { id: created.id },
+      data: { rawUrl: canonical, normalizedUrl: canonical },
+    });
+    return NextResponse.json({ ok: true, content: updated, articleUrl: `/a/${created.id}` });
+  }
 
   let normalized: string;
   let kind: "youtube" | "web";
@@ -106,6 +145,7 @@ export async function PATCH(req: NextRequest) {
   if (parsed.data.title !== undefined) data.title = parsed.data.title;
   if (parsed.data.description !== undefined) data.description = parsed.data.description;
   if (parsed.data.previewImageUrl !== undefined) data.previewImageUrl = parsed.data.previewImageUrl;
+  if (parsed.data.body !== undefined && item.kind === "mtrly") data.bodyMarkdown = parsed.data.body;
 
   const updated = await db.contentUrl.update({
     where: { id: parsed.data.id },

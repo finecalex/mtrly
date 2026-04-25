@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { Youtube, FileText, ExternalLink, Lock, Play, TrendingUp } from "lucide-react";
+import { Youtube, FileText, ExternalLink, Lock, Play, TrendingUp, BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { cn } from "@/lib/cn";
+import { hashGradient } from "@/lib/gradients";
 
 export type ContentCardItem = {
   id: number;
-  kind: "youtube" | "web";
+  kind: "youtube" | "web" | "mtrly";
   title: string | null;
   description: string | null;
   previewImageUrl: string | null;
@@ -27,6 +28,22 @@ export type ContentCardItem = {
   };
 };
 
+function isInternalArticle(item: ContentCardItem): boolean {
+  return item.kind === "mtrly";
+}
+
+function tuneInHrefFor(item: ContentCardItem): { href: string; external: boolean } | null {
+  if (isInternalArticle(item)) return { href: `/a/${item.id}`, external: false };
+  if (item.rawUrl) return { href: item.rawUrl, external: true };
+  return null;
+}
+
+function kindIconFor(kind: ContentCardItem["kind"]) {
+  if (kind === "youtube") return Youtube;
+  if (kind === "mtrly") return BookOpen;
+  return FileText;
+}
+
 export function ContentCard({
   item,
   showCreator = true,
@@ -39,7 +56,10 @@ export function ContentCard({
   const earned = item.lifetimeEarnedUsdc != null ? parseFloat(item.lifetimeEarnedUsdc) : null;
   const trending = item.trending7dUsdc != null ? parseFloat(item.trending7dUsdc) : 0;
   const slug = item.creator?.slug;
-  const canTuneIn = isAuthed && !!item.rawUrl;
+  // Internal articles can be opened by anyone (the article page itself paywalls
+  // beyond the first paragraph). External URLs stay locked behind auth so visitors
+  // can't bypass the meter by going to YouTube directly.
+  const canTuneIn = isInternalArticle(item) ? true : isAuthed && !!item.rawUrl;
 
   return (
     <Card className="group flex flex-col overflow-hidden bg-creator-card transition-all hover:border-accent/40">
@@ -64,7 +84,7 @@ export function ContentCard({
         </div>
 
         <div className="mt-auto flex items-center gap-2">
-          <CTA canTuneIn={canTuneIn} rawUrl={item.rawUrl} />
+          <CTA item={item} canTuneIn={canTuneIn} />
           {trending > 0 && (
             <Badge variant="warn">
               <TrendingUp size={10} /> ${trending.toFixed(4)}/7d
@@ -89,7 +109,10 @@ export function ContentCard({
 }
 
 function PreviewSurface({ item, canTuneIn }: { item: ContentCardItem; canTuneIn: boolean }) {
-  const KindIcon = item.kind === "youtube" ? Youtube : FileText;
+  const KindIcon = kindIconFor(item.kind);
+  const seed = `${item.kind}-${item.id}-${item.title ?? ""}`;
+  const gradient = hashGradient(seed);
+
   return (
     <div className="relative aspect-video w-full overflow-hidden border-b border-border/60">
       {item.previewImageUrl ? (
@@ -110,11 +133,24 @@ function PreviewSurface({ item, canTuneIn }: { item: ContentCardItem; canTuneIn:
       ) : (
         <div
           className={cn(
-            "flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-2 via-surface to-bg",
-            !canTuneIn && "blur-md",
+            "relative flex h-full w-full items-center justify-center transition-transform duration-500",
+            !canTuneIn && "scale-105 blur-sm saturate-75",
+            canTuneIn && "group-hover:scale-105",
           )}
+          style={{ background: gradient }}
         >
-          <KindIcon size={42} className="text-muted/50" />
+          {item.kind === "mtrly" && item.title ? (
+            <div className="px-6 text-center">
+              <div className="mb-2 flex justify-center">
+                <KindIcon size={20} className="text-white/70" />
+              </div>
+              <div className="line-clamp-3 text-sm font-semibold leading-tight text-white/95">
+                {item.title}
+              </div>
+            </div>
+          ) : (
+            <KindIcon size={42} className="text-white/60" />
+          )}
         </div>
       )}
 
@@ -131,9 +167,15 @@ function PreviewSurface({ item, canTuneIn }: { item: ContentCardItem; canTuneIn:
         {canTuneIn ? (
           <div className="flex flex-col items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <div className="rounded-full bg-accent p-3 text-bg shadow-[0_0_24px_rgba(124,255,124,0.5)]">
-              <Play size={18} fill="currentColor" />
+              {item.kind === "mtrly" ? (
+                <BookOpen size={18} />
+              ) : (
+                <Play size={18} fill="currentColor" />
+              )}
             </div>
-            <span className="font-mono text-[10px] uppercase text-fg">Tune in</span>
+            <span className="font-mono text-[10px] uppercase text-fg">
+              {item.kind === "mtrly" ? "Read" : "Tune in"}
+            </span>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-1.5 rounded-full border border-border/80 bg-bg/80 px-4 py-2 text-fg backdrop-blur-md">
@@ -170,16 +212,32 @@ function CreatorRow({ creator }: { creator: NonNullable<ContentCardItem["creator
   );
 }
 
-function CTA({ canTuneIn, rawUrl }: { canTuneIn: boolean; rawUrl: string | null }) {
-  if (canTuneIn && rawUrl) {
+function CTA({ item, canTuneIn }: { item: ContentCardItem; canTuneIn: boolean }) {
+  const target = tuneInHrefFor(item);
+  if (canTuneIn && target) {
+    const isInternal = !target.external;
+    const label = item.kind === "mtrly" ? "Read" : "Tune in";
+    const Icon = item.kind === "mtrly" ? BookOpen : Play;
+    if (isInternal) {
+      return (
+        <Link
+          href={target.href}
+          className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 font-mono text-[11px] uppercase text-accent hover:bg-accent/20"
+        >
+          <Icon size={11} fill={item.kind === "mtrly" ? undefined : "currentColor"} />
+          {label}
+        </Link>
+      );
+    }
     return (
       <a
-        href={rawUrl}
+        href={target.href}
         target="_blank"
         rel="noreferrer"
         className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 font-mono text-[11px] uppercase text-accent hover:bg-accent/20"
       >
-        <Play size={11} fill="currentColor" /> Tune in
+        <Icon size={11} fill="currentColor" />
+        {label}
         <ExternalLink size={10} />
       </a>
     );
