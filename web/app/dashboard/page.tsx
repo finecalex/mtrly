@@ -40,6 +40,7 @@ type Earnings = {
     id: number;
     amountUsdc: string;
     createdAt: string;
+    status: "pending" | "onchain" | "failed";
     onchainTxHash: string | null;
     explorerUrl: string | null;
   }>;
@@ -600,6 +601,22 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
   );
 }
 
+const AUTO_CASHOUT_PRESETS = ["off", "0.05", "0.10", "0.50", "1.00"] as const;
+
+// Server returns the threshold as a full-precision Prisma Decimal string
+// (e.g. "0.10000000"). We need to map it back to one of the preset chip
+// values so the right chip lights up after reload.
+function normalizeThreshold(v: string | null | undefined): string {
+  if (v == null) return "off";
+  const n = parseFloat(v);
+  if (!Number.isFinite(n) || n <= 0) return "off";
+  for (const opt of AUTO_CASHOUT_PRESETS) {
+    if (opt === "off") continue;
+    if (Math.abs(parseFloat(opt) - n) < 0.001) return opt;
+  }
+  return n.toFixed(2);
+}
+
 function AutoCashoutPanel({
   earnings,
   onSaved,
@@ -607,15 +624,13 @@ function AutoCashoutPanel({
   earnings: Earnings | null;
   onSaved: () => void;
 }) {
-  const current = earnings?.autoWithdrawThresholdUsdc;
-  const initial = current ? current : "off";
-  const [value, setValue] = useState<string>(initial);
+  const [value, setValue] = useState<string>(() => normalizeThreshold(earnings?.autoWithdrawThresholdUsdc));
   const [saving, setSaving] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
-    setValue(current ? String(current) : "off");
-  }, [current]);
+    setValue(normalizeThreshold(earnings?.autoWithdrawThresholdUsdc));
+  }, [earnings?.autoWithdrawThresholdUsdc]);
 
   async function save(next: string) {
     setSaving(true);
@@ -655,7 +670,7 @@ function AutoCashoutPanel({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-bg p-1">
-          {(["off", "0.05", "0.10", "0.50", "1.00"] as const).map((opt) => (
+          {AUTO_CASHOUT_PRESETS.map((opt) => (
             <button
               key={opt}
               type="button"
@@ -686,18 +701,24 @@ function AutoCashoutPanel({
               >
                 <span className="text-muted">{new Date(r.createdAt).toLocaleString()}</span>
                 <span className="text-accent tabular-nums">+${parseFloat(r.amountUsdc).toFixed(4)}</span>
-                {r.explorerUrl ? (
+                {r.status === "onchain" && r.explorerUrl && r.onchainTxHash ? (
                   <a
                     href={r.explorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="rounded-md border border-green-400/40 bg-green-400/5 px-2 py-0.5 text-[10px] text-green-400 hover:bg-green-400/10"
-                    title={r.onchainTxHash ?? ""}
+                    title={r.onchainTxHash}
                   >
-                    {r.onchainTxHash ? `${r.onchainTxHash.slice(0, 6)}…${r.onchainTxHash.slice(-4)}` : "view"} ↗
+                    {r.onchainTxHash.slice(0, 6)}…{r.onchainTxHash.slice(-4)} ↗
                   </a>
+                ) : r.status === "failed" ? (
+                  <span className="rounded-md border border-red-400/40 bg-red-400/5 px-2 py-0.5 text-[10px] text-red-400">
+                    refunded
+                  </span>
                 ) : (
-                  <span className="text-muted">pending</span>
+                  <span className="rounded-md border border-yellow-300/30 bg-yellow-300/5 px-2 py-0.5 text-[10px] text-yellow-300">
+                    settling…
+                  </span>
                 )}
               </li>
             ))}

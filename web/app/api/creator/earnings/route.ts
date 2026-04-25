@@ -54,26 +54,37 @@ export async function GET() {
   }
 
   // Recent auto-cashouts: BalanceTransaction rows of type=withdraw with our
-  // `auto-withdraw:onchain:<hash>` referenceId encode them. We surface up to
-  // 10 most recent so the dashboard can show real onchain proof of the
-  // creator's earnings flowing to their EOA.
+  // auto-withdraw:* referenceId encode them. We pull EVERY status (pending,
+  // onchain, failed-refunded) and let the UI render each appropriately —
+  // otherwise stuck-pending or hash-less successful settles disappear from
+  // the list and the creator can't see what's happening.
   const autoCashouts = await db.balanceTransaction.findMany({
     where: {
       userId: uid,
       type: "withdraw",
-      referenceId: { startsWith: "auto-withdraw:onchain:" },
+      referenceId: { startsWith: "auto-withdraw:" },
     },
     orderBy: { createdAt: "desc" },
     take: 10,
     select: { id: true, amountUsdc: true, referenceId: true, createdAt: true },
   });
   const autoWithdrawals = autoCashouts.map((r) => {
-    const hash = r.referenceId?.replace(/^auto-withdraw:onchain:/, "") ?? null;
+    const ref = r.referenceId ?? "";
+    let status: "pending" | "onchain" | "failed" = "pending";
+    let hash: string | null = null;
+    if (ref.startsWith("auto-withdraw:onchain:")) {
+      status = "onchain";
+      const h = ref.slice("auto-withdraw:onchain:".length);
+      hash = h && h.startsWith("0x") ? h : null;
+    } else if (ref.startsWith("auto-withdraw:failed")) {
+      status = "failed";
+    }
     return {
       id: r.id,
       // amountUsdc is stored negative for withdraws — flip for the UI
       amountUsdc: new Prisma.Decimal(r.amountUsdc).neg().toString(),
       createdAt: r.createdAt,
+      status,
       onchainTxHash: hash,
       explorerUrl: hash ? `https://testnet.arcscan.app/tx/${hash}` : null,
     };
