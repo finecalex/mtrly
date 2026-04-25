@@ -9,6 +9,19 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 ## [Unreleased]
 
 ### Added
+- **Hackathon-finale polish round — six product surfaces tightened in one batch.** All visible from the live demo at https://circlearc-59513674.slonix.dev.
+  - `/dashboard` refresh: replaced dev-monospace card grid with shadcn-style `<UICard>`s + Avatar header + new `<ContentRow>` grid (2-col, 28×28 thumbnail with hash-gradient fallback, line-clamped title/description, sessions/viewers/earned chips, edit + open buttons). Header has avatar, role badge, slug link, "View public page" + "Balance" CTAs.
+  - `<EditContentDialog>` — bottom-sheet modal (sheets up on mobile, centered on desktop) for editing existing content. Title / description (280-char counter) / preview image URL / body markdown (when kind=mtrly, with paragraph counter). Calls `PATCH /api/creator/content`. Esc + backdrop close. Replaces "register, then no way to fix typos" UX gap.
+  - Mobile nav: `<SiteHeader>` now collapses on `<md` to a hamburger that opens a left drawer with full nav (Explore / Leaderboard / How it works) + the user dropdown items. Drawer dismisses on outside click + Escape. Desktop nav unchanged.
+  - Read-time estimate on `/a/[id]` hero: new `readTimeMinutes(body, wpm=200)` helper in `lib/articleBody.ts`, surfaced as `~{N} min read` muted badge alongside paragraph count + total cost.
+  - `<TopArticlesStrip>` on `/`: 4 top earning Mtrly-native articles below `<TopCreatorsStrip>`, each card linking to `/a/<id>` with hash-gradient + title + description + earnings + onchain count.
+  - `/explore` text search: `<input>` with 250ms debounce above the filter row; `?q=` server-side filter on title/description/creator displayName/creator slug (Prisma `contains, mode: insensitive`); 80-char cap. Filter row also gained an "Articles" tab for `kind=mtrly`.
+  - `/how-it-works` page: 3-section layout (Viewers / Creators / Developers) with 9 numbered step-cards covering the full lifecycle, pricing breakdown, and a "Try it now" CTA. Mounted on the desktop nav + mobile drawer. Helps non-technical visitors understand the model in <30s without reading PRD.md.
+  - OG images for `/c/[slug]` (`opengraph-image.tsx`): dynamic 1200×630 PNG via `next/og` — gradient avatar bubble (hash-based palette), display name, slug, bio (220 chars), 3 stats (lifetime earned, payments, onchain settlements). Renders at request time from Postgres.
+  - OG images for `/a/[id]`: full-bleed hash-gradient background, article title (auto-sized 56-72pt), description, creator byline, 3 pills (read time, paragraph count, fully-read cost). Both feed Twitter cards + Telegram previews when share-row is used.
+  - `README.md` (new) + `LICENSE` (new): top-level project README with live demo link, "demo this in 60 seconds" walkthrough, ASCII architecture diagram, repo map, "what we built specifically for this hackathon" section, Circle products list. MIT license file.
+
+### Added
 - **Native articles — creators can write content directly on Mtrly.** Until now creators had to host content elsewhere (YouTube, their own blog) and register the URL. Now they can publish article-style text directly inside Mtrly, metered by the same per-paragraph extension flow.
   - `ContentKind.mtrly` enum + `ContentUrl.bodyMarkdown` (Postgres `Text`) — native articles are first-class ContentUrl rows. After insert, `rawUrl` and `normalizedUrl` are set to the canonical `https://<host>/a/<id>` so the extension's `/api/match` keeps working uniformly across kinds.
   - `lib/articleBody.ts` — `splitParagraphs()` (split on blank lines), `renderInline()` (XSS-safe escape + lightweight markdown: `**bold**`, `*italic*`, `[text](https://url)` external-only links), `firstParagraphPreview()`, `paragraphCount()`.

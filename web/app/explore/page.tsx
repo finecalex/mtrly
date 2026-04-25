@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Compass, Youtube, FileText, Sparkles, TrendingUp, Clock } from "lucide-react";
+import { Compass, Youtube, FileText, Sparkles, TrendingUp, Clock, Search, X, BookOpen } from "lucide-react";
 import { ContentCard, ContentCardItem } from "@/components/ContentCard";
 import { cn } from "@/lib/cn";
 
@@ -21,11 +21,13 @@ type ExploreItem = ContentCardItem & {
 };
 
 type Sort = "recent" | "trending" | "earnings";
-type KindFilter = "all" | "youtube" | "web";
+type KindFilter = "all" | "youtube" | "web" | "mtrly";
 
 export default function ExplorePage() {
   const [sort, setSort] = useState<Sort>("recent");
   const [kind, setKind] = useState<KindFilter>("all");
+  const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [items, setItems] = useState<ExploreItem[]>([]);
   const [isAuthed, setIsAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -38,12 +40,19 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q.trim()), 250);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  useEffect(() => {
     setLoading(true);
-    fetch(`/api/explore?sort=${sort}&kind=${kind}`)
+    const params = new URLSearchParams({ sort, kind });
+    if (debouncedQ) params.set("q", debouncedQ);
+    fetch(`/api/explore?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => setItems(data.items ?? []))
       .finally(() => setLoading(false));
-  }, [sort, kind]);
+  }, [sort, kind, debouncedQ]);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -70,16 +79,41 @@ export default function ExplorePage() {
         )}
       </header>
 
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+      <div className="mt-8">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value.slice(0, 80))}
+            placeholder="Search by title, description, creator…"
+            className="w-full rounded-lg border border-border bg-surface pl-9 pr-9 py-2.5 text-sm placeholder:text-muted focus:border-fg focus:outline-none focus:ring-1 focus:ring-accent/30"
+          />
+          {q && (
+            <button
+              onClick={() => setQ("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted hover:bg-bg hover:text-fg"
+              aria-label="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
         <div className="flex items-center gap-1 text-sm">
           <FilterTab active={kind === "all"} onClick={() => setKind("all")}>
             All
+          </FilterTab>
+          <FilterTab active={kind === "mtrly"} onClick={() => setKind("mtrly")}>
+            <BookOpen size={14} /> Articles
           </FilterTab>
           <FilterTab active={kind === "youtube"} onClick={() => setKind("youtube")}>
             <Youtube size={14} /> YouTube
           </FilterTab>
           <FilterTab active={kind === "web"} onClick={() => setKind("web")}>
-            <FileText size={14} /> Articles
+            <FileText size={14} /> External
           </FilterTab>
         </div>
         <div className="flex items-center gap-1 text-sm">

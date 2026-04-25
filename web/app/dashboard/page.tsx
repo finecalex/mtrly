@@ -1,6 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Pencil, ExternalLink, BookOpen, Youtube, FileText, Wallet, Share2, Eye } from "lucide-react";
+import { Avatar } from "@/components/ui/Avatar";
+import { Badge } from "@/components/ui/Badge";
+import { Card as UICard, CardContent, CardHeader } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { EditContentDialog, EditableContent } from "@/components/EditContentDialog";
+import { hashGradient } from "@/lib/gradients";
 
 type Earnings = {
   balanceUsdc: string;
@@ -32,6 +40,9 @@ type ContentItem = {
   rawUrl: string;
   normalizedUrl: string;
   title: string | null;
+  description: string | null;
+  previewImageUrl: string | null;
+  bodyMarkdown: string | null;
   createdAt: string;
   sessions: number;
   viewers: number;
@@ -43,6 +54,8 @@ type Me = {
   displayName: string | null;
   role: string;
   walletAddress?: string | null;
+  slug?: string | null;
+  avatarUrl?: string | null;
 };
 
 export default function DashboardPage() {
@@ -59,6 +72,7 @@ export default function DashboardPage() {
   const [publishedArticle, setPublishedArticle] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditableContent | null>(null);
 
   const [wdAmount, setWdAmount] = useState("");
   const [wdDest, setWdDest] = useState("");
@@ -177,26 +191,67 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-8 py-12">
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="font-mono text-xs uppercase text-muted">mtrly / creator / dashboard</div>
-          <h1 className="mt-4 text-4xl font-semibold">{me.displayName ?? me.email}</h1>
-          <p className="mt-1 text-sm text-muted">Role: {me.role}</p>
+    <main className="mx-auto max-w-5xl px-6 py-10">
+      <header className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-4">
+          <Avatar
+            size={56}
+            name={me.displayName}
+            email={me.email}
+            seed={me.slug ?? me.email}
+            src={me.avatarUrl ?? undefined}
+          />
+          <div>
+            <div className="font-mono text-[10px] uppercase text-muted">mtrly · creator dashboard</div>
+            <h1 className="mt-0.5 text-2xl font-semibold tracking-tight sm:text-3xl">
+              {me.displayName ?? me.email}
+            </h1>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge variant="muted">{me.role}</Badge>
+              {me.slug && (
+                <Link
+                  href={`/c/${me.slug}`}
+                  className="flex items-center gap-1 font-mono text-[10px] uppercase text-muted hover:text-fg"
+                >
+                  <Eye size={11} /> /c/{me.slug}
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
-        <a href="/balance" className="rounded border border-border px-4 py-2 font-mono text-xs uppercase hover:border-fg">
-          View balance →
-        </a>
-      </div>
+        <div className="flex items-center gap-2">
+          {me.slug && (
+            <Link href={`/c/${me.slug}`}>
+              <Button variant="secondary" size="sm">
+                <Share2 size={14} /> View public page
+              </Button>
+            </Link>
+          )}
+          <Link href="/balance">
+            <Button variant="secondary" size="sm">
+              <Wallet size={14} /> Balance
+            </Button>
+          </Link>
+        </div>
+      </header>
 
-      <section className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card title="Balance (USDC)" value={`$${fmt(earnings?.balanceUsdc)}`} sub="Spendable + unclaimed" />
-        <Card
-          title="Lifetime earned"
+      <section className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-3">
+        <StatCard
+          label="Balance (USDC)"
+          value={`$${fmt(earnings?.balanceUsdc)}`}
+          sub="Spendable + unclaimed"
+        />
+        <StatCard
+          label="Lifetime earned"
           value={`$${fmt(earnings?.lifetimeEarnedUsdc)}`}
           sub={`${earnings?.lifetimePaymentCount ?? 0} payments · ${earnings?.onchainSettledCount ?? 0} onchain`}
+          accent
         />
-        <Card title="Registered URLs" value={contents.length.toString()} sub="YouTube + web" />
+        <StatCard
+          label="Active content"
+          value={contents.length.toString()}
+          sub="across YouTube · web · articles"
+        />
       </section>
 
       {me.walletAddress && (
@@ -390,49 +445,24 @@ export default function DashboardPage() {
       </section>
 
       <section className="mt-10">
-        <h2 className="font-mono text-xs uppercase text-muted">Your content</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">Your content</h2>
+          <span className="font-mono text-[10px] uppercase text-muted">{contents.length} items</span>
+        </div>
         {contents.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">No content registered yet.</p>
+          <p className="mt-3 text-sm text-muted">
+            No content yet. Use the form above to register a URL or write your first article on Mtrly.
+          </p>
         ) : (
-          <div className="mt-3 overflow-hidden rounded border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-surface font-mono text-xs uppercase text-muted">
-                <tr>
-                  <th className="px-4 py-2 text-left">Title / URL</th>
-                  <th className="px-4 py-2 text-left">Kind</th>
-                  <th className="px-4 py-2 text-right">Sessions</th>
-                  <th className="px-4 py-2 text-right">Viewers</th>
-                  <th className="px-4 py-2 text-right">Earned</th>
-                </tr>
-              </thead>
-              <tbody>
-                {contents.map((c) => {
-                  const perRow = earnings?.perContent.find((p) => p.contentId === c.id);
-                  const isMtrly = c.kind === "mtrly";
-                  const href = isMtrly ? `/a/${c.id}` : c.rawUrl;
-                  const linkLabel = isMtrly ? `/a/${c.id}` : c.normalizedUrl;
-                  return (
-                    <tr key={c.id} className="border-t border-border">
-                      <td className="px-4 py-3">
-                        <div className="font-medium">{c.title ?? "—"}</div>
-                        <a
-                          href={href}
-                          target={isMtrly ? "_self" : "_blank"}
-                          rel="noopener noreferrer"
-                          className="font-mono text-xs text-muted hover:text-fg"
-                        >
-                          {linkLabel}
-                        </a>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">{c.kind}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">{c.sessions}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">{c.viewers}</td>
-                      <td className="px-4 py-3 text-right font-mono text-xs">${fmt(perRow?.amountUsdc)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            {contents.map((c) => (
+              <ContentRow
+                key={c.id}
+                content={c}
+                earnings={earnings?.perContent.find((p) => p.contentId === c.id)}
+                onEdit={() => setEditing(c)}
+              />
+            ))}
           </div>
         )}
       </section>
@@ -470,17 +500,118 @@ export default function DashboardPage() {
           </ul>
         )}
       </section>
+
+      {editing && (
+        <EditContentDialog
+          content={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => refresh()}
+        />
+      )}
     </main>
   );
 }
 
-function Card({ title, value, sub }: { title: string; value: string; sub?: string }) {
+function StatCard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
   return (
-    <div className="rounded border border-border bg-surface p-5">
-      <div className="font-mono text-xs uppercase text-muted">{title}</div>
-      <div className="mt-2 text-3xl font-semibold tabular-nums">{value}</div>
-      {sub && <div className="mt-1 font-mono text-xs text-muted">{sub}</div>}
-    </div>
+    <UICard>
+      <CardContent className="p-5">
+        <div className="font-mono text-[10px] uppercase text-muted">{label}</div>
+        <div className={`mt-2 text-3xl font-semibold tabular-nums ${accent ? "text-accent" : ""}`}>{value}</div>
+        {sub && <div className="mt-1 font-mono text-xs text-muted">{sub}</div>}
+      </CardContent>
+    </UICard>
+  );
+}
+
+function ContentRow({
+  content,
+  earnings,
+  onEdit,
+}: {
+  content: ContentItem;
+  earnings?: { amountUsdc: string; payments: number };
+  onEdit: () => void;
+}) {
+  const isMtrly = content.kind === "mtrly";
+  const isYoutube = content.kind === "youtube";
+  const KindIcon = isYoutube ? Youtube : isMtrly ? BookOpen : FileText;
+  const href = isMtrly ? `/a/${content.id}` : content.rawUrl;
+  const grad = hashGradient(`${content.kind}-${content.id}-${content.title ?? ""}`);
+  const earned = earnings ? parseFloat(earnings.amountUsdc) : 0;
+
+  return (
+    <UICard className="overflow-hidden">
+      <div className="flex">
+        <div
+          className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden"
+          style={{ background: grad }}
+        >
+          {content.previewImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={content.previewImageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")}
+            />
+          ) : (
+            <KindIcon size={28} className="text-white/70" />
+          )}
+        </div>
+        <div className="flex flex-1 flex-col p-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="line-clamp-2 text-sm font-semibold">
+                {content.title ?? <span className="italic text-muted">Untitled</span>}
+              </div>
+              {content.description ? (
+                <p className="mt-1 line-clamp-2 text-xs text-muted">{content.description}</p>
+              ) : (
+                <p className="mt-1 text-xs italic text-muted/60">No description.</p>
+              )}
+            </div>
+            <Badge variant="kind">
+              <KindIcon size={10} />
+              {content.kind}
+            </Badge>
+          </div>
+          <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+            <div className="flex gap-3 font-mono text-[10px] text-muted">
+              <span>
+                <span className="text-fg tabular-nums">{content.sessions}</span> sessions
+              </span>
+              <span>
+                <span className="text-fg tabular-nums">{content.viewers}</span> viewers
+              </span>
+              <span>
+                <span className="text-accent tabular-nums">${earned.toFixed(4)}</span> earned
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onEdit}
+                title="Edit"
+                className="rounded-md p-1.5 text-muted hover:bg-bg hover:text-fg"
+              >
+                <Pencil size={13} />
+              </button>
+              {href && (
+                <a
+                  href={href}
+                  target={isMtrly ? "_self" : "_blank"}
+                  rel="noreferrer"
+                  title="Open"
+                  className="rounded-md p-1.5 text-muted hover:bg-bg hover:text-fg"
+                >
+                  <ExternalLink size={13} />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </UICard>
   );
 }
 

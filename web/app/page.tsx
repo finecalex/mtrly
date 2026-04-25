@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LiveTicker } from "@/components/LiveTicker";
 import { TopCreatorsStrip } from "@/components/TopCreatorsStrip";
+import { TopArticlesStrip } from "@/components/TopArticlesStrip";
 
 export default function Home() {
   return (
@@ -79,6 +80,10 @@ export default function Home() {
 
       <div className="mt-20">
         <TopCreatorsStrip />
+      </div>
+
+      <div className="mt-20">
+        <TopArticlesStrip />
       </div>
 
       <section className="mt-20 border-t border-border pt-12">

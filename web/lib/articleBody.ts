@@ -34,6 +34,11 @@ export function renderInline(s: string): string {
   return out;
 }
 
+export function readTimeMinutes(body: string, wordsPerMinute = 200): number {
+  const words = body.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / wordsPerMinute));
+}
+
 export function firstParagraphPreview(body: string, maxLen = 240): string {
   const paras = splitParagraphs(body);
   if (paras.length === 0) return "";

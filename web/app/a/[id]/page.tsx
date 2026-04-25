@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
-import { splitParagraphs, renderInline } from "@/lib/articleBody";
+import { splitParagraphs, renderInline, readTimeMinutes } from "@/lib/articleBody";
 import { hashGradient } from "@/lib/gradients";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +55,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
   const isOwner = uid === creator.id;
   const paragraphs = splitParagraphs(article.bodyMarkdown ?? "");
   const totalCost = paragraphs.length * 0.005;
+  const readMin = readTimeMinutes(article.bodyMarkdown ?? "");
   const settleAddr = creator.ownedEoaAddress ?? creator.circleWalletAddr;
   const grad = hashGradient(`article-${article.id}`);
 
@@ -95,6 +96,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
           </div>
         </Link>
         <Badge variant="kind">mtrly · article</Badge>
+        <Badge variant="muted">~{readMin} min read</Badge>
         <Badge variant="muted">{paragraphs.length} paragraphs · ~${totalCost.toFixed(3)} to fully read</Badge>
         {stats.onchain > 0 && (
           <Badge variant="onchain">

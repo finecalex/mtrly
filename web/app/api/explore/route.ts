@@ -13,14 +13,24 @@ export async function GET(req: NextRequest) {
   const sort = (url.searchParams.get("sort") as Sort | null) ?? "recent";
   const kindParam = (url.searchParams.get("kind") as KindFilter | null) ?? "all";
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 100);
+  const q = (url.searchParams.get("q") ?? "").trim().slice(0, 80);
   const uid = await currentUserId();
   const isAuthed = uid != null;
 
-  const whereKind = kindParam === "all" ? {} : { kind: kindParam };
+  const where: Record<string, unknown> = {};
+  if (kindParam !== "all") where.kind = kindParam;
+  if (q) {
+    where.OR = [
+      { title: { contains: q, mode: "insensitive" } },
+      { description: { contains: q, mode: "insensitive" } },
+      { creator: { displayName: { contains: q, mode: "insensitive" } } },
+      { creator: { slug: { contains: q, mode: "insensitive" } } },
+    ];
+  }
 
   // Pull contents + creator
   const contents = await db.contentUrl.findMany({
-    where: whereKind,
+    where,
     take: limit * 2, // overfetch then sort/trim
     orderBy: { createdAt: "desc" },
     include: {
