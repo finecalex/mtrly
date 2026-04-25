@@ -9,6 +9,16 @@ Every commit updates this file. Every push to `main` auto-deploys to prod.
 ## [Unreleased]
 
 ### Added
+- **Content previews + auth-gated URLs (paywall integrity).** Logged-out visitors of `/explore` and `/c/[slug]` could previously click straight through to the YouTube/article URL — bypassing the meter. Fixed by:
+  - `ContentUrl.description` (varchar 280) + `ContentUrl.previewImageUrl` columns; creators add a teaser description on registration; thumbnails auto-derived from YouTube URLs (`i.ytimg.com/vi/<id>/hqdefault.jpg`).
+  - `lib/youtube.ts`: `extractYouTubeVideoId()` + `youtubeThumbnail()` + `previewImageForUrl()`.
+  - `/api/explore` and `/api/creator/[slug]` now return `rawUrl: null` + `normalizedUrl: null` when the caller is not authenticated. Description + preview image are always returned (so cards stay informative). When authed, full `rawUrl` is returned and the "Tune in →" CTA opens directly.
+  - `<ContentCard>` (new shared component, `web/components/ContentCard.tsx`) — used by `/explore` and `/c/[slug]`. Renders 16:9 thumbnail with a center overlay: locked padlock + "Sign up to watch" for non-authed (thumbnail blurred + saturate-50), or hover-reveal play button + "Tune in" for authed. Title + 3-line description + earned/onchain stats below. Footer CTA "Sign up to watch" → `/auth/signup`, or "Tune in →" external link with `target=_blank`. Trending 7d badge.
+  - Dashboard "Register new content" form gains a description textarea (280-char counter) + helper note "URL stays hidden from logged-out visitors so they can't skip the meter."
+  - `PATCH /api/creator/content` for editing existing title/description/preview without re-registering.
+  - `POST /api/admin/backfill-thumbnails` — one-shot backfill for legacy YouTube content (already run on prod, 2/4 ContentUrls updated — the other 2 are web URLs, no thumbnail).
+  - Banner on `/explore` for non-authed users explaining: "Previews are blurred until you sign up. Watching always pays the creator — the URL stays hidden so the meter can't be skipped."
+
 - **Consumer surface — Patreon/Boosty-style discovery, leaderboard, public creator pages.** New top-level routes turn Mtrly from a developer demo into something a non-technical viewer can navigate in under 30 seconds, while keeping the Circle/Arc onchain-proof story front and center.
   - `GET /api/explore` — paginated catalog of all registered ContentUrls joined with creator metadata + per-content aggregates (lifetime earnings, payment count, onchain-settled count, 7-day trending USDC, viewer count, session count). Filters: `?kind=youtube|web|all`, `?sort=recent|trending|earnings`. ISR `revalidate = 30s`.
   - `GET /api/leaderboard?window=7d|30d|all` — top creators by lifetime USDC earned via `payment.groupBy({by:["toUserId"]})`. Returns rank, slug, displayName, avatarUrl, ownedEoaAddress (for arcscan link), payment count, onchain-settled count, content count.

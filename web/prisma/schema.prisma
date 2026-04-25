@@ -77,14 +77,16 @@ model BalanceTransaction {
 }
 
 model ContentUrl {
-  id             Int        @id @default(autoincrement())
-  creatorId      Int
-  creator        User       @relation("CreatorContent", fields: [creatorId], references: [id], onDelete: Cascade)
-  kind           ContentKind
-  rawUrl         String
-  normalizedUrl  String     @unique
-  title          String?
-  createdAt      DateTime   @default(now())
+  id              Int        @id @default(autoincrement())
+  creatorId       Int
+  creator         User       @relation("CreatorContent", fields: [creatorId], references: [id], onDelete: Cascade)
+  kind            ContentKind
+  rawUrl          String
+  normalizedUrl   String     @unique
+  title           String?
+  description     String?    @db.VarChar(280)
+  previewImageUrl String?
+  createdAt       DateTime   @default(now())
 
   consumption    Consumption[]
   sessions       ViewSession[]

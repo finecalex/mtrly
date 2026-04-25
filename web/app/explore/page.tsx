@@ -2,19 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Compass, Youtube, FileText, Sparkles, TrendingUp, Clock, ExternalLink } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Avatar } from "@/components/ui/Avatar";
+import { Compass, Youtube, FileText, Sparkles, TrendingUp, Clock } from "lucide-react";
+import { ContentCard, ContentCardItem } from "@/components/ContentCard";
 import { cn } from "@/lib/cn";
 
-type ExploreItem = {
-  id: number;
-  kind: "youtube" | "web";
-  rawUrl: string;
-  normalizedUrl: string;
-  title: string | null;
+type ExploreItem = ContentCardItem & {
+  normalizedUrl: string | null;
   createdAt: string;
+  paymentCount: number;
+  sessionCount: number;
   creator: {
     id: number;
     slug: string | null;
@@ -22,12 +18,6 @@ type ExploreItem = {
     avatarUrl: string | null;
     ownedEoaAddress: string | null;
   };
-  lifetimeEarnedUsdc: string;
-  paymentCount: number;
-  onchainSettledCount: number;
-  trending7dUsdc: string;
-  viewerCount: number;
-  sessionCount: number;
 };
 
 type Sort = "recent" | "trending" | "earnings";
@@ -37,7 +27,15 @@ export default function ExplorePage() {
   const [sort, setSort] = useState<Sort>("recent");
   const [kind, setKind] = useState<KindFilter>("all");
   const [items, setItems] = useState<ExploreItem[]>([]);
+  const [isAuthed, setIsAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => setIsAuthed(!!d.user))
+      .catch(() => setIsAuthed(false));
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -58,9 +56,18 @@ export default function ExplorePage() {
         </h1>
         <p className="max-w-2xl text-muted">
           Every paragraph read or second watched flows USDC from your balance to the creator's
-          wallet — settled onchain on Arc Testnet via Circle Gateway. No subscriptions. No tipping
+          wallet — settled onchain on Arc Testnet via Circle Gateway. No subscriptions, no tipping
           buttons.
         </p>
+        {!isAuthed && (
+          <p className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-2 text-sm text-muted">
+            Previews are blurred until you{" "}
+            <Link href="/auth/signup" className="font-medium text-accent hover:underline">
+              sign up
+            </Link>
+            . Watching always pays the creator — the URL stays hidden so the meter can't be skipped.
+          </p>
+        )}
       </header>
 
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
@@ -101,90 +108,11 @@ export default function ExplorePage() {
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {items.map((item) => (
-            <ContentCard key={item.id} item={item} />
+            <ContentCard key={item.id} item={item} isAuthed={isAuthed} />
           ))}
         </div>
       )}
     </main>
-  );
-}
-
-function ContentCard({ item }: { item: ExploreItem }) {
-  const earned = parseFloat(item.lifetimeEarnedUsdc);
-  const slug = item.creator.slug;
-  return (
-    <Card className="group overflow-hidden bg-creator-card transition-all hover:border-accent/40 hover:bg-surface-2/60">
-      <div className="flex items-center gap-3 border-b border-border/60 p-4">
-        <Avatar
-          size={36}
-          name={item.creator.displayName}
-          email={null}
-          seed={slug ?? String(item.creator.id)}
-          src={item.creator.avatarUrl ?? undefined}
-        />
-        <div className="min-w-0 flex-1">
-          {slug ? (
-            <Link href={`/c/${slug}`} className="block truncate text-sm font-medium hover:underline">
-              {item.creator.displayName ?? slug}
-            </Link>
-          ) : (
-            <span className="truncate text-sm font-medium">{item.creator.displayName ?? "—"}</span>
-          )}
-          <div className="font-mono text-[10px] uppercase text-muted">
-            {slug ? `mtrly/c/${slug}` : "anonymous"}
-          </div>
-        </div>
-        <Badge variant="kind">
-          {item.kind === "youtube" ? <Youtube size={10} /> : <FileText size={10} />}
-          {item.kind}
-        </Badge>
-      </div>
-
-      <CardContent className="space-y-3 pt-4">
-        <div className="line-clamp-2 min-h-[2.5em] text-sm font-medium leading-snug">
-          {item.title ?? <span className="text-muted">{item.normalizedUrl}</span>}
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 rounded-lg border border-border/60 bg-bg/40 p-2 text-center">
-          <Stat label="viewers" value={item.viewerCount.toString()} />
-          <Stat label="earned" value={`$${earned.toFixed(4)}`} accent />
-          <Stat label="onchain" value={item.onchainSettledCount.toString()} green />
-        </div>
-
-        <div className="flex items-center justify-between">
-          <a
-            href={item.rawUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 font-mono text-[10px] uppercase text-muted hover:text-fg"
-          >
-            open <ExternalLink size={10} />
-          </a>
-          {parseFloat(item.trending7dUsdc) > 0 && (
-            <Badge variant="warn">
-              <TrendingUp size={10} /> ${parseFloat(item.trending7dUsdc).toFixed(4)}/7d
-            </Badge>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function Stat({ label, value, accent, green }: { label: string; value: string; accent?: boolean; green?: boolean }) {
-  return (
-    <div>
-      <div
-        className={cn(
-          "font-mono text-sm tabular-nums",
-          accent && "text-accent",
-          green && "text-green-400",
-        )}
-      >
-        {value}
-      </div>
-      <div className="font-mono text-[9px] uppercase text-muted">{label}</div>
-    </div>
   );
 }
 
@@ -220,7 +148,7 @@ function Skeleton() {
   return (
     <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {[0, 1, 2, 3, 4, 5].map((i) => (
-        <div key={i} className="h-56 animate-pulse rounded-xl border border-border bg-surface/50" />
+        <div key={i} className="h-72 animate-pulse rounded-xl border border-border bg-surface/50" />
       ))}
     </div>
   );

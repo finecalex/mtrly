@@ -51,6 +51,7 @@ export default function DashboardPage() {
   const [contents, setContents] = useState<ContentItem[]>([]);
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -108,7 +109,11 @@ export default function DashboardPage() {
     const res = await fetch("/api/creator/content", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url, title: title || undefined }),
+      body: JSON.stringify({
+        url,
+        title: title || undefined,
+        description: description || undefined,
+      }),
     });
     const data = await res.json();
     setSubmitting(false);
@@ -118,6 +123,7 @@ export default function DashboardPage() {
     }
     setUrl("");
     setTitle("");
+    setDescription("");
     refresh();
   }
 
@@ -231,29 +237,45 @@ export default function DashboardPage() {
 
       <section className="mt-10">
         <h2 className="font-mono text-xs uppercase text-muted">Register new content</h2>
-        <form onSubmit={addContent} className="mt-3 flex flex-col gap-3 sm:flex-row">
-          <input
-            type="url"
-            placeholder="https://www.youtube.com/watch?v=…  or  https://your-article-url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-            className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
+        <p className="mt-1 text-xs text-muted">
+          For YouTube, the thumbnail is auto-detected. The URL stays hidden from logged-out
+          visitors so they can't skip the meter.
+        </p>
+        <form onSubmit={addContent} className="mt-3 flex flex-col gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <input
+              type="url"
+              placeholder="https://www.youtube.com/watch?v=…  or  https://your-article-url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required
+              className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
+            />
+            <input
+              type="text"
+              placeholder="Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg sm:w-60"
+            />
+          </div>
+          <textarea
+            placeholder="Short description shown on previews (max 280 chars)…"
+            value={description}
+            onChange={(e) => setDescription(e.target.value.slice(0, 280))}
+            rows={2}
+            className="rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
           />
-          <input
-            type="text"
-            placeholder="Title (optional)"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg sm:w-60"
-          />
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded border border-accent bg-accent px-5 py-2 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
-          >
-            {submitting ? "…" : "Register"}
-          </button>
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[10px] text-muted">{description.length}/280</span>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded border border-accent bg-accent px-5 py-2 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
+            >
+              {submitting ? "…" : "Register"}
+            </button>
+          </div>
         </form>
         {err && <div className="mt-2 font-mono text-xs text-red-400">{err}</div>}
       </section>

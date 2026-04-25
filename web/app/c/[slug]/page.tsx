@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import type { Metadata } from "next";
-import { Youtube, FileText, ExternalLink, Sparkles, Wallet, ShieldCheck } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/Card";
+import { Sparkles, Wallet, ShieldCheck, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
+import { ContentCard } from "@/components/ContentCard";
 import ShareRow from "./ShareRow";
 
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 type CreatorResp = {
   ok: true;
@@ -27,8 +27,10 @@ type CreatorResp = {
     id: number;
     kind: "youtube" | "web";
     title: string | null;
-    rawUrl: string;
-    normalizedUrl: string;
+    description: string | null;
+    previewImageUrl: string | null;
+    rawUrl: string | null;
+    normalizedUrl: string | null;
     createdAt: string;
     lifetimeEarnedUsdc: string;
     paymentCount: number;
@@ -48,8 +50,10 @@ async function fetchCreator(slug: string): Promise<CreatorResp | null> {
   const h = headers();
   const host = h.get("host") ?? "circlearc-59513674.slonix.dev";
   const proto = h.get("x-forwarded-proto") ?? "https";
+  const cookieHeader = cookies().toString();
   const res = await fetch(`${proto}://${host}/api/creator/${encodeURIComponent(slug)}`, {
-    next: { revalidate: 30 },
+    cache: "no-store",
+    headers: cookieHeader ? { cookie: cookieHeader } : undefined,
   });
   if (!res.ok) return null;
   const data = await res.json();
@@ -136,34 +140,25 @@ export default async function CreatorPage({ params }: { params: { slug: string }
             No content registered yet.
           </div>
         ) : (
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {data.content.map((item) => (
-              <Card key={item.id} className="bg-surface/40">
-                <CardContent className="space-y-3 p-5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="kind">
-                      {item.kind === "youtube" ? <Youtube size={10} /> : <FileText size={10} />}
-                      {item.kind}
-                    </Badge>
-                    <a
-                      href={item.rawUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1 font-mono text-[10px] uppercase text-muted hover:text-fg"
-                    >
-                      open <ExternalLink size={10} />
-                    </a>
-                  </div>
-                  <div className="line-clamp-2 min-h-[2.5em] text-sm font-medium">
-                    {item.title ?? <span className="text-muted">{item.normalizedUrl}</span>}
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 rounded-lg border border-border/60 bg-bg/40 p-2 text-center">
-                    <SmallStat label="viewers" value={item.viewerCount.toString()} />
-                    <SmallStat label="earned" value={`$${parseFloat(item.lifetimeEarnedUsdc).toFixed(4)}`} accent />
-                    <SmallStat label="onchain" value={item.onchainSettledCount.toString()} green />
-                  </div>
-                </CardContent>
-              </Card>
+              <ContentCard
+                key={item.id}
+                showCreator={false}
+                isAuthed={item.rawUrl != null}
+                item={{
+                  id: item.id,
+                  kind: item.kind,
+                  title: item.title,
+                  description: item.description,
+                  previewImageUrl: item.previewImageUrl,
+                  rawUrl: item.rawUrl,
+                  lifetimeEarnedUsdc: item.lifetimeEarnedUsdc,
+                  paymentCount: item.paymentCount,
+                  onchainSettledCount: item.onchainSettledCount,
+                  viewerCount: item.viewerCount,
+                }}
+              />
             ))}
           </div>
         )}
@@ -217,19 +212,3 @@ function Stat({ label, value, accent, green }: { label: string; value: string; a
   );
 }
 
-function SmallStat({ label, value, accent, green }: { label: string; value: string; accent?: boolean; green?: boolean }) {
-  return (
-    <div>
-      <div
-        className={[
-          "font-mono text-sm tabular-nums",
-          accent ? "text-accent" : "",
-          green ? "text-green-400" : "",
-        ].join(" ")}
-      >
-        {value}
-      </div>
-      <div className="font-mono text-[9px] uppercase text-muted">{label}</div>
-    </div>
-  );
-}

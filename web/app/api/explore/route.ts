@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { currentUserId } from "@/lib/auth";
 
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 type Sort = "recent" | "trending" | "earnings";
 type KindFilter = "all" | "youtube" | "web";
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest) {
   const sort = (url.searchParams.get("sort") as Sort | null) ?? "recent";
   const kindParam = (url.searchParams.get("kind") as KindFilter | null) ?? "all";
   const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 100);
+  const uid = await currentUserId();
+  const isAuthed = uid != null;
 
   const whereKind = kindParam === "all" ? {} : { kind: kindParam };
 
@@ -81,9 +84,11 @@ export async function GET(req: NextRequest) {
     return {
       id: c.id,
       kind: c.kind,
-      rawUrl: c.rawUrl,
-      normalizedUrl: c.normalizedUrl,
+      rawUrl: isAuthed ? c.rawUrl : null,
+      normalizedUrl: isAuthed ? c.normalizedUrl : null,
       title: c.title,
+      description: c.description,
+      previewImageUrl: c.previewImageUrl,
       createdAt: c.createdAt.toISOString(),
       creator: {
         id: c.creator.id,
