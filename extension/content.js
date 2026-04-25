@@ -249,10 +249,30 @@
     } else if (matchRes.kind === "web") {
       await setupTextPaywall(matchRes);
     } else if (matchRes.kind === "mtrly" || matchRes.pageManaged) {
-      // Mtrly's own article page handles metering itself via tap-to-reveal —
-      // we just keep the balance panel visible so the user has continuous
-      // wallet context while reading. No tick observer here.
+      // Page-managed metering. We don't fire ticks ourselves but we do poll
+      // /api/auth/me every 3s so the panel's Balance and This-view counters
+      // reflect taps the page is making in real time.
+      startPageManagedBalancePoll();
     }
+  }
+
+  let pageManagedInitialBalance = null;
+  let pageManagedTimer = null;
+
+  function startPageManagedBalancePoll() {
+    if (pageManagedTimer) return;
+    const poll = async () => {
+      const res = await sendMessage({ type: "me" });
+      const bal = res?.user?.balance != null ? Number(res.user.balance) : null;
+      if (bal == null) return;
+      if (pageManagedInitialBalance == null) pageManagedInitialBalance = bal;
+      lastBalance = bal;
+      const sessionSpent = Math.max(0, pageManagedInitialBalance - bal);
+      spent = sessionSpent;
+      updatePanel({ balance: bal, spent: sessionSpent, status: sessionSpent > 0 ? "playing" : "paused" });
+    };
+    poll();
+    pageManagedTimer = setInterval(poll, 3000);
   }
 
   async function setupTextPaywall(match) {

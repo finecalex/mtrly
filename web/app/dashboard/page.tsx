@@ -9,6 +9,7 @@ import { Card as UICard, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditContentDialog, EditableContent } from "@/components/EditContentDialog";
 import { IncomeChart } from "@/components/IncomeChart";
+import { EngagementOverview } from "@/components/EngagementOverview";
 import { useToast } from "@/components/ui/Toaster";
 import { hashGradient } from "@/lib/gradients";
 
@@ -272,6 +273,12 @@ export default function DashboardPage() {
           label="Active content"
           value={contents.length.toString()}
           sub="across YouTube · web · articles"
+        />
+      </section>
+
+      <section className="mt-8">
+        <EngagementOverview
+          contents={contents.map((c) => ({ id: c.id, kind: c.kind, title: c.title }))}
         />
       </section>
 
