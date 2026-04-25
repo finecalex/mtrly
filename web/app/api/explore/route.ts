@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const sort = (url.searchParams.get("sort") as Sort | null) ?? "recent";
   const kindParam = (url.searchParams.get("kind") as KindFilter | null) ?? "all";
-  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "50", 10) || 50, 100);
+  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "24", 10) || 24, 100);
+  const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0", 10) || 0, 0);
   const q = (url.searchParams.get("q") ?? "").trim().slice(0, 80);
   const uid = await currentUserId();
   const isAuthed = uid != null;
@@ -28,10 +29,12 @@ export async function GET(req: NextRequest) {
     ];
   }
 
+  const totalMatching = await db.contentUrl.count({ where });
   // Pull contents + creator
   const contents = await db.contentUrl.findMany({
     where,
-    take: limit * 2, // overfetch then sort/trim
+    take: Math.max(limit * 2, 24),
+    skip: offset,
     orderBy: { createdAt: "desc" },
     include: {
       creator: {
@@ -48,7 +51,9 @@ export async function GET(req: NextRequest) {
   });
 
   const ids = contents.map((c) => c.id);
-  if (ids.length === 0) return NextResponse.json({ ok: true, items: [] });
+  if (ids.length === 0) {
+    return NextResponse.json({ ok: true, items: [], total: totalMatching, hasMore: false });
+  }
 
   // Aggregate: lifetime earned + viewers + onchain count + trending (7d) per content
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
@@ -123,5 +128,12 @@ export async function GET(req: NextRequest) {
     sorted = [...items].sort((a, b) => parseFloat(b.trending7dUsdc) - parseFloat(a.trending7dUsdc));
   }
 
-  return NextResponse.json({ ok: true, items: sorted.slice(0, limit) });
+  const trimmed = sorted.slice(0, limit);
+  return NextResponse.json({
+    ok: true,
+    items: trimmed,
+    total: totalMatching,
+    offset,
+    hasMore: offset + trimmed.length < totalMatching,
+  });
 }

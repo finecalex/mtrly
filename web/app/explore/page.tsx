@@ -29,8 +29,11 @@ export default function ExplorePage() {
   const [q, setQ] = useState("");
   const [debouncedQ, setDebouncedQ] = useState("");
   const [items, setItems] = useState<ExploreItem[]>([]);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [isAuthed, setIsAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -46,13 +49,31 @@ export default function ExplorePage() {
 
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({ sort, kind });
+    const params = new URLSearchParams({ sort, kind, limit: "24" });
     if (debouncedQ) params.set("q", debouncedQ);
     fetch(`/api/explore?${params.toString()}`)
       .then((r) => r.json())
-      .then((data) => setItems(data.items ?? []))
+      .then((data) => {
+        setItems(data.items ?? []);
+        setTotal(data.total ?? 0);
+        setHasMore(!!data.hasMore);
+      })
       .finally(() => setLoading(false));
   }, [sort, kind, debouncedQ]);
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    const params = new URLSearchParams({ sort, kind, limit: "24", offset: items.length.toString() });
+    if (debouncedQ) params.set("q", debouncedQ);
+    try {
+      const data = await fetch(`/api/explore?${params.toString()}`).then((r) => r.json());
+      setItems((prev) => [...prev, ...(data.items ?? [])]);
+      setHasMore(!!data.hasMore);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
@@ -140,11 +161,27 @@ export default function ExplorePage() {
           and register a URL.
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((item) => (
-            <ContentCard key={item.id} item={item} isAuthed={isAuthed} />
-          ))}
-        </div>
+        <>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map((item) => (
+              <ContentCard key={item.id} item={item} isAuthed={isAuthed} />
+            ))}
+          </div>
+          <div className="mt-8 flex flex-col items-center gap-2">
+            <div className="font-mono text-[10px] uppercase text-muted">
+              Showing {items.length} of {total}
+            </div>
+            {hasMore && (
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="rounded-lg border border-border bg-surface px-5 py-2 text-sm hover:border-fg disabled:opacity-50"
+              >
+                {loadingMore ? "Loading…" : "Load more"}
+              </button>
+            )}
+          </div>
+        </>
       )}
     </main>
   );

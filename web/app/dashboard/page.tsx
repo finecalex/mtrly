@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Card as UICard, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { EditContentDialog, EditableContent } from "@/components/EditContentDialog";
+import { IncomeChart } from "@/components/IncomeChart";
+import { useToast } from "@/components/ui/Toaster";
 import { hashGradient } from "@/lib/gradients";
 
 type Earnings = {
@@ -73,6 +75,7 @@ export default function DashboardPage() {
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [editing, setEditing] = useState<EditableContent | null>(null);
+  const toast = useToast();
 
   const [wdAmount, setWdAmount] = useState("");
   const [wdDest, setWdDest] = useState("");
@@ -114,10 +117,18 @@ export default function DashboardPage() {
     setWdBusy(false);
     if (!res.ok) {
       setWdErr(data.error ?? data.reason ?? "failed");
+      toast.push({ kind: "error", title: "Withdraw failed", description: data.error ?? data.reason ?? "" });
       return;
     }
     setWdResult({ explorerUrl: data.explorerUrl, recipient: data.recipient, amount: data.amount });
     setWdAmount("");
+    toast.push({
+      kind: "success",
+      title: `Withdrew $${Number(data.amount).toFixed(4)}`,
+      description: `Sent to ${data.recipient.slice(0, 10)}…${data.recipient.slice(-6)} on Arc Testnet`,
+      href: data.explorerUrl,
+      hrefLabel: "arcscan",
+    });
     refresh();
   }
 
@@ -254,75 +265,102 @@ export default function DashboardPage() {
         />
       </section>
 
-      {me.walletAddress && (
-        <section className="mt-6 rounded border border-green-400/30 bg-green-400/5 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="font-mono text-[10px] uppercase text-green-400">Onchain settlement proof</div>
-              <div className="mt-1 font-mono text-xs text-muted">
-                Payouts to your wallet settle on Arc Testnet. All incoming batches are verifiable onchain.
-              </div>
-              <div className="mt-1 break-all font-mono text-[11px]">{me.walletAddress}</div>
+      <section className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
+        <IncomeChart />
+        <UICard>
+          <CardContent className="p-5">
+            <div className="flex items-center gap-2 font-mono text-[10px] uppercase text-muted">
+              <Wallet size={12} /> Withdraw to wallet
             </div>
-            <a
-              href={`https://testnet.arcscan.app/address/${me.walletAddress}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="shrink-0 rounded border border-green-400/50 px-3 py-2 font-mono text-[10px] uppercase text-green-400 hover:bg-green-400/10"
-            >
-              View wallet on arcscan ↗
-            </a>
+            <p className="mt-2 text-xs text-muted">
+              Cash out your balance to any Arc Testnet address via Circle Gateway. Each withdraw =
+              one onchain mint tx. Defaults to your Circle wallet.
+            </p>
+            <form onSubmit={withdraw} className="mt-4 space-y-3">
+              <div>
+                <label className="font-mono text-[10px] uppercase text-muted">Amount</label>
+                <div className="relative mt-1.5">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted">$</span>
+                  <input
+                    type="number"
+                    step="0.000001"
+                    min="0"
+                    max="100"
+                    placeholder="0.0000"
+                    value={wdAmount}
+                    onChange={(e) => setWdAmount(e.target.value)}
+                    required
+                    className="h-10 w-full rounded-lg border border-border bg-surface pl-6 pr-2 text-sm focus:border-fg focus:outline-none"
+                  />
+                </div>
+                <div className="mt-1.5 flex gap-1">
+                  {["0.10", "0.50", "1.00"].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setWdAmount(p)}
+                      className="rounded-md border border-border bg-bg px-2 py-1 font-mono text-[10px] uppercase text-muted hover:border-fg hover:text-fg"
+                    >
+                      ${p}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setWdAmount(parseFloat(earnings?.balanceUsdc ?? "0").toFixed(6))}
+                    className="rounded-md border border-border bg-bg px-2 py-1 font-mono text-[10px] uppercase text-muted hover:border-fg hover:text-fg"
+                  >
+                    Max
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="font-mono text-[10px] uppercase text-muted">Destination (0x…)</label>
+                <input
+                  type="text"
+                  placeholder={me.walletAddress ?? "your wallet by default"}
+                  value={wdDest}
+                  onChange={(e) => setWdDest(e.target.value)}
+                  className="mt-1.5 h-10 w-full rounded-lg border border-border bg-surface px-3 font-mono text-xs focus:border-fg focus:outline-none"
+                />
+              </div>
+              <Button type="submit" disabled={wdBusy} className="w-full">
+                <Wallet size={14} /> {wdBusy ? "Withdrawing…" : "Withdraw"}
+              </Button>
+            </form>
+            {wdResult && (
+              <div className="mt-3 rounded-lg border border-accent/40 bg-accent/10 p-2 font-mono text-[10px]">
+                Withdrew ${fmt(wdResult.amount)} to{" "}
+                <span className="break-all">{wdResult.recipient}</span> ·{" "}
+                <a href={wdResult.explorerUrl} target="_blank" rel="noreferrer" className="text-accent underline">
+                  arcscan ↗
+                </a>
+              </div>
+            )}
+            {wdErr && (
+              <div className="mt-3 rounded-lg border border-red-400/40 bg-red-400/10 p-2 font-mono text-[10px] text-red-400">
+                {wdErr}
+              </div>
+            )}
+          </CardContent>
+        </UICard>
+      </section>
+
+      {me.walletAddress && (
+        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-green-400/30 bg-green-400/5 p-4">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase text-green-400">Onchain settlement proof</span>
+            <span className="break-all font-mono text-[11px]">{me.walletAddress}</span>
           </div>
+          <a
+            href={`https://testnet.arcscan.app/address/${me.walletAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded-lg border border-green-400/50 px-3 py-1.5 font-mono text-[10px] uppercase text-green-400 hover:bg-green-400/10"
+          >
+            arcscan ↗
+          </a>
         </section>
       )}
-
-      <section className="mt-10">
-        <h2 className="font-mono text-xs uppercase text-muted">Withdraw to wallet</h2>
-        <p className="mt-2 text-sm text-muted">
-          Cash out your USDC balance to any Arc-testnet address via Circle Gateway. Defaults to your Circle wallet.
-        </p>
-        <form onSubmit={withdraw} className="mt-3 flex flex-col gap-3 sm:flex-row">
-          <input
-            type="number"
-            step="0.000001"
-            min="0"
-            max="100"
-            placeholder="Amount (USDC)"
-            value={wdAmount}
-            onChange={(e) => setWdAmount(e.target.value)}
-            required
-            className="w-full rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg sm:w-48"
-          />
-          <input
-            type="text"
-            placeholder={me.walletAddress ?? "0x… destination (optional)"}
-            value={wdDest}
-            onChange={(e) => setWdDest(e.target.value)}
-            className="flex-1 rounded border border-border bg-surface px-3 py-2 font-mono text-sm outline-none focus:border-fg"
-          />
-          <button
-            type="submit"
-            disabled={wdBusy}
-            className="rounded border border-accent bg-accent px-5 py-2 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
-          >
-            {wdBusy ? "…" : "Withdraw"}
-          </button>
-        </form>
-        {wdErr && <div className="mt-2 font-mono text-xs text-red-400">{wdErr}</div>}
-        {wdResult && (
-          <div className="mt-3 rounded border border-border bg-surface p-3 font-mono text-xs">
-            <div className="text-muted">Withdrew ${fmt(wdResult.amount)} to {wdResult.recipient}</div>
-            <a
-              href={wdResult.explorerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent hover:underline"
-            >
-              View on arcscan ↗
-            </a>
-          </div>
-        )}
-      </section>
 
       <section className="mt-10">
         <h2 className="font-mono text-xs uppercase text-muted">Publish new content</h2>

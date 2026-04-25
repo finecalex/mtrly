@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LiveTicker } from "@/components/LiveTicker";
 import { TopCreatorsStrip } from "@/components/TopCreatorsStrip";
 import { TopArticlesStrip } from "@/components/TopArticlesStrip";
+import { TrendingStrip } from "@/components/TrendingStrip";
 
 export default function Home() {
   return (
@@ -77,6 +78,10 @@ export default function Home() {
           </li>
         </ol>
       </section>
+
+      <div className="mt-20">
+        <TrendingStrip />
+      </div>
 
       <div className="mt-20">
         <TopCreatorsStrip />

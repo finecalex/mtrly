@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Trophy, Crown, Medal, ExternalLink } from "lucide-react";
+import { Trophy, Crown, Medal, ExternalLink, Heart, Coins } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
@@ -23,19 +23,38 @@ type Item = {
 };
 
 type Window = "7d" | "30d" | "all";
+type Variant = "all" | "tips" | "ticks";
 
 export default function LeaderboardPage() {
   const [win, setWin] = useState<Window>("all");
+  const [variant, setVariant] = useState<Variant>("all");
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/leaderboard?window=${win}`)
+    fetch(`/api/leaderboard?window=${win}&type=${variant}&limit=20`)
       .then((r) => r.json())
-      .then((data) => setItems(data.items ?? []))
+      .then((data) => {
+        setItems(data.items ?? []);
+        setHasMore((data.items ?? []).length >= 20);
+      })
       .finally(() => setLoading(false));
-  }, [win]);
+  }, [win, variant]);
+
+  async function loadMore() {
+    if (loadingMore) return;
+    setLoadingMore(true);
+    const data = await fetch(
+      `/api/leaderboard?window=${win}&type=${variant}&limit=20&offset=${items.length}`,
+    ).then((r) => r.json());
+    const next = data.items ?? [];
+    setItems((prev) => [...prev, ...next]);
+    setHasMore(next.length >= 20);
+    setLoadingMore(false);
+  }
 
   const top3 = items.slice(0, 3);
   const rest = items.slice(3);
@@ -55,19 +74,32 @@ export default function LeaderboardPage() {
         </p>
       </header>
 
-      <div className="mt-8 flex gap-1 rounded-lg border border-border bg-surface p-1">
-        {(["all", "30d", "7d"] as Window[]).map((w) => (
-          <button
-            key={w}
-            onClick={() => setWin(w)}
-            className={cn(
-              "flex-1 rounded-md px-4 py-1.5 text-sm transition-colors",
-              win === w ? "bg-bg text-fg" : "text-muted hover:text-fg",
-            )}
-          >
-            {w === "all" ? "All time" : w === "30d" ? "Last 30 days" : "Last 7 days"}
-          </button>
-        ))}
+      <div className="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+          {(["all", "30d", "7d"] as Window[]).map((w) => (
+            <button
+              key={w}
+              onClick={() => setWin(w)}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm transition-colors",
+                win === w ? "bg-bg text-fg" : "text-muted hover:text-fg",
+              )}
+            >
+              {w === "all" ? "All time" : w === "30d" ? "30 days" : "7 days"}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 rounded-lg border border-border bg-surface p-1">
+          <VariantTab active={variant === "all"} onClick={() => setVariant("all")}>
+            <Coins size={13} /> All earnings
+          </VariantTab>
+          <VariantTab active={variant === "ticks"} onClick={() => setVariant("ticks")}>
+            <Trophy size={13} /> Per-second
+          </VariantTab>
+          <VariantTab active={variant === "tips"} onClick={() => setVariant("tips")}>
+            <Heart size={13} /> Tips only
+          </VariantTab>
+        </div>
       </div>
 
       {loading ? (
@@ -91,6 +123,7 @@ export default function LeaderboardPage() {
           )}
 
           {rest.length > 0 && (
+            <>
             <div className="mt-8 overflow-hidden rounded-xl border border-border">
               <table className="w-full">
                 <thead className="bg-surface">
@@ -127,10 +160,36 @@ export default function LeaderboardPage() {
                 </tbody>
               </table>
             </div>
+            {hasMore && (
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="rounded-lg border border-border bg-surface px-5 py-2 text-sm hover:border-fg disabled:opacity-50"
+                >
+                  {loadingMore ? "Loading…" : "Load more"}
+                </button>
+              </div>
+            )}
+            </>
           )}
         </>
       )}
     </main>
+  );
+}
+
+function VariantTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs transition-colors",
+        active ? "bg-bg text-fg" : "text-muted hover:text-fg",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 

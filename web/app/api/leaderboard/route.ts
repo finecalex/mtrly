@@ -5,27 +5,36 @@ import { db } from "@/lib/db";
 export const revalidate = 30;
 
 type Window = "7d" | "30d" | "all";
+type Type = "all" | "tips" | "ticks";
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const win = (url.searchParams.get("window") as Window | null) ?? "all";
-  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "20", 10) || 20, 50);
+  const type = (url.searchParams.get("type") as Type | null) ?? "all";
+  const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "20", 10) || 20, 100);
+  const offset = Math.max(parseInt(url.searchParams.get("offset") ?? "0", 10) || 0, 0);
 
   const since =
     win === "7d" ? new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
     : win === "30d" ? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     : null;
 
+  const where: Record<string, unknown> = {};
+  if (since) where.createdAt = { gte: since };
+  if (type === "tips") where.kind = "tip";
+  else if (type === "ticks") where.kind = "tick";
+
   const grouped = await db.payment.groupBy({
     by: ["toUserId"],
-    where: since ? { createdAt: { gte: since } } : {},
+    where,
     _sum: { amountUsdc: true },
     _count: { _all: true },
     orderBy: { _sum: { amountUsdc: "desc" } },
     take: limit,
+    skip: offset,
   });
 
-  if (grouped.length === 0) return NextResponse.json({ ok: true, window: win, items: [] });
+  if (grouped.length === 0) return NextResponse.json({ ok: true, window: win, type, items: [], hasMore: false });
 
   const userIds = grouped.map((g) => g.toUserId);
 

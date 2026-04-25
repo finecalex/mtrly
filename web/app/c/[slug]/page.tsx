@@ -6,6 +6,7 @@ import { Sparkles, Wallet, ShieldCheck, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { ContentCard } from "@/components/ContentCard";
+import { TipJar } from "@/components/TipJar";
 import ShareRow from "./ShareRow";
 
 export const dynamic = "force-dynamic";
@@ -168,15 +169,19 @@ export default async function CreatorPage({ params }: { params: { slug: string }
         )}
       </section>
 
-      <section className="mt-10 rounded-xl border border-accent/30 bg-accent/5 p-6">
+      <div className="mt-10">
+        <TipJar slug={c.slug ?? ""} displayName={c.displayName ?? c.slug ?? "creator"} recipientUserId={c.id} />
+      </div>
+
+      <section className="mt-8 rounded-xl border border-accent/30 bg-accent/5 p-6">
         <div className="flex items-start gap-3">
           <Sparkles size={20} className="mt-1 text-accent" />
           <div className="flex-1">
             <h3 className="text-lg font-semibold">How to support {c.displayName ?? c.slug}</h3>
             <p className="mt-1 text-sm text-muted">
-              Mtrly meters every second of attention. Top up your balance once, install the
-              extension, and watch their content — every paragraph or second of video flows USDC
-              to their wallet through Circle Gateway. No subscription, no popup wallet prompts.
+              Two ways: (1) Tip jar above — one-shot bonus that settles immediately. (2) Per-second
+              metering — top up your balance once, install the extension, and read/watch their
+              content; every paragraph or second flows USDC to their wallet through Circle Gateway.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
