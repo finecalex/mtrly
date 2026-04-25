@@ -21,18 +21,23 @@
   }
 
   // Detect YouTube ad playback. YouTube uses the same <video> element for
-  // both ads and the actual video, swapping the source. We rely on DOM
-  // signals YouTube already exposes: `.ad-showing` / `.ad-interrupting`
-  // classes on the player wrapper, plus the `.ytp-ad-player-overlay-instream-info`
-  // element that only exists during an ad. Returns true if any of those
-  // signals are present, in which case the meter pauses.
+  // both ads and the actual video, swapping the source. We check a wide set
+  // of DOM signals YouTube exposes during ads — any one of them is enough.
   function isYouTubeAdPlaying() {
-    if (!/(^|\.)youtube\.com$/.test(window.location.hostname)) return false;
+    if (!window.location.hostname.endsWith("youtube.com")) return false;
+    // Broadest check first: any element carrying the ad-showing class anywhere
+    // in the document (YouTube sometimes puts it on the player or its parents).
+    if (document.querySelector(".ad-showing")) return true;
     const player = document.querySelector(".html5-video-player");
-    if (player && (player.classList.contains("ad-showing") || player.classList.contains("ad-interrupting"))) {
-      return true;
+    if (player) {
+      const cls = player.className || "";
+      // ad-showing / ad-interrupting are the canonical signals; ytp-ad-* prefix
+      // covers a few extra states the player exposes during pre/mid/post rolls.
+      if (/\b(ad-showing|ad-interrupting|ytp-ad-)/.test(cls)) return true;
     }
-    if (document.querySelector(".ytp-ad-player-overlay, .ytp-ad-player-overlay-instream-info, .ytp-ad-skip-button, .ytp-ad-text")) {
+    if (document.querySelector(
+      ".ytp-ad-player-overlay, .ytp-ad-player-overlay-instream-info, .ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-ad-text, .ytp-ad-preview-container, .video-ads.ytp-ad-module:not(:empty)",
+    )) {
       return true;
     }
     return false;

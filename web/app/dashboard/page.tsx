@@ -42,6 +42,7 @@ type Earnings = {
     createdAt: string;
     status: "pending" | "onchain" | "failed";
     onchainTxHash: string | null;
+    failureReason: string | null;
     explorerUrl: string | null;
   }>;
 };
@@ -697,10 +698,11 @@ function AutoCashoutPanel({
             {recent.map((r) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between gap-3 border-b border-border/40 py-1.5 last:border-b-0"
+                className="border-b border-border/40 py-1.5 last:border-b-0"
               >
+                <div className="flex items-center justify-between gap-3">
                 <span className="text-muted">{new Date(r.createdAt).toLocaleString()}</span>
-                <span className="text-accent tabular-nums">+${parseFloat(r.amountUsdc).toFixed(4)}</span>
+                <span className={`tabular-nums ${r.status === "failed" ? "text-muted line-through" : "text-accent"}`}>+${parseFloat(r.amountUsdc).toFixed(4)}</span>
                 {r.status === "onchain" && r.explorerUrl && r.onchainTxHash ? (
                   <a
                     href={r.explorerUrl}
@@ -712,13 +714,25 @@ function AutoCashoutPanel({
                     {r.onchainTxHash.slice(0, 6)}…{r.onchainTxHash.slice(-4)} ↗
                   </a>
                 ) : r.status === "failed" ? (
-                  <span className="rounded-md border border-red-400/40 bg-red-400/5 px-2 py-0.5 text-[10px] text-red-400">
-                    refunded
-                  </span>
+                  <a
+                    href={r.explorerUrl ?? "https://testnet.arcscan.app"}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-red-400/40 bg-red-400/5 px-2 py-0.5 text-[10px] text-red-400 hover:bg-red-400/10"
+                  >
+                    refunded ↗
+                  </a>
                 ) : (
                   <span className="rounded-md border border-yellow-300/30 bg-yellow-300/5 px-2 py-0.5 text-[10px] text-yellow-300">
                     settling…
                   </span>
+                )}
+                </div>
+                {r.status === "failed" && (
+                  <div className="mt-1 break-all rounded-md border border-red-400/20 bg-red-400/5 px-2 py-1 text-[10px] leading-snug text-red-400/90">
+                    <span className="font-semibold">Why refunded:</span>{" "}
+                    {r.failureReason ?? "Cashout failed; balance has been restored to your account."}
+                  </div>
                 )}
               </li>
             ))}
