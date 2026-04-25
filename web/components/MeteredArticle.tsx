@@ -9,6 +9,32 @@ type ParagraphState = "locked" | "paying" | "unlocked";
 
 const PRICE_PER_PARAGRAPH = 0.005;
 
+function lsKey(contentId: number) {
+  return `mtrly:paid-paragraphs:${contentId}`;
+}
+
+function loadPaidFromLocalStorage(contentId: number): number[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(lsKey(contentId));
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter((n) => Number.isInteger(n) && n >= 0);
+  } catch {
+    return [];
+  }
+}
+
+function persistPaidToLocalStorage(contentId: number, idxs: Set<number>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(lsKey(contentId), JSON.stringify(Array.from(idxs)));
+  } catch {
+    // quota exceeded or storage disabled — non-fatal
+  }
+}
+
 export function MeteredArticle({
   paragraphs,
   contentId,
@@ -25,13 +51,31 @@ export function MeteredArticle({
   initialPaidCount: number;
 }) {
   const total = paragraphs.length;
+
+  // Server only knows the *count* of paid paragraphs (Consumption.unitsConsumed).
+  // It can't tell which specific indices were paid, since applyTick increments a
+  // counter rather than recording an index. We reconstruct the per-index set on
+  // the client by merging:
+  //   1. The first paragraph (always free)
+  //   2. localStorage from prior visits on this device
+  //   3. A sequential fallback (0..initialPaidCount) so that even on a fresh
+  //      device the user sees at least the count-implied paragraphs unlocked
+  // The localStorage record is the source of truth for *which* paragraphs are
+  // unlocked visually; the server's count is the source of truth for billing.
   const initialUnlockSet = useMemo(() => {
     if (isOwner) return new Set(paragraphs.map((p) => p.idx));
-    if (!isAuthed) return new Set([0]);
     const s = new Set<number>([0]);
-    for (let i = 1; i <= initialPaidCount && i < total; i++) s.add(i);
+    if (!isAuthed) return s;
+    const fromLs = loadPaidFromLocalStorage(contentId);
+    for (const i of fromLs) if (i < total) s.add(i);
+    // Sequential fallback only if the localStorage record is shorter than the
+    // server's count (fresh device, etc.) — top up so the user doesn't see
+    // paragraphs marked locked that they've already paid for.
+    if (fromLs.length < initialPaidCount) {
+      for (let i = 1; i <= initialPaidCount && i < total; i++) s.add(i);
+    }
     return s;
-  }, [paragraphs, isOwner, isAuthed, initialPaidCount, total]);
+  }, [paragraphs, isOwner, isAuthed, initialPaidCount, total, contentId]);
 
   const [states, setStates] = useState<Record<number, ParagraphState>>(() => {
     const init: Record<number, ParagraphState> = {};
@@ -134,12 +178,19 @@ export function MeteredArticle({
         }
         setStates((s) => ({ ...s, [idx]: "unlocked" }));
         triggerReveal(idx);
+        // Persist the paid index so reload on this device keeps the paragraph
+        // open instead of re-charging.
+        const nextSet = new Set<number>([0, idx]);
+        Object.entries(states).forEach(([k, v]) => {
+          if (v === "unlocked") nextSet.add(Number(k));
+        });
+        persistPaidToLocalStorage(contentId, nextSet);
       } catch {
         setStates((s) => ({ ...s, [idx]: "locked" }));
         toast.push({ kind: "error", title: "Network glitch", description: "Try once more." });
       }
     },
-    [states, ensureSession, toast, triggerReveal],
+    [states, ensureSession, toast, triggerReveal, contentId],
   );
 
   // Owner-mode preview: nothing to meter, but still mark all unlocked.
@@ -191,31 +242,46 @@ export function MeteredArticle({
           );
         }
 
-        // Locked / paying state — interactive.
+        // Locked / paying — div with role=button instead of <button>, because
+        // the paragraph HTML can contain <a> tags which are invalid inside
+        // <button> and steal the click on browsers that render the <a> as
+        // interactive. The locked text is hidden behind blur+pointer-events
+        // anyway, so the only real click target is the wrapper.
         const handleActivate = () => {
           if (isPaying) return;
-          if (!isAuthed) return;
+          if (!isAuthed) {
+            window.location.href = `/auth/signup?next=/a/${articleId}`;
+            return;
+          }
           unlockParagraph(p.idx);
         };
 
-        const InteractiveWrapper = !isAuthed ? "a" : "button";
-        const href = !isAuthed ? `/auth/signup?next=/a/${articleId}` : undefined;
-
         return (
           <div key={p.idx} className="group relative">
-            <InteractiveWrapper
-              {...(InteractiveWrapper === "a" ? { href } : { type: "button", onClick: handleActivate, disabled: isPaying })}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={handleActivate}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleActivate();
+                }
+              }}
               data-mtrly-paragraph={p.idx}
               data-mtrly-state={state}
               aria-label={isAuthed ? `Reveal paragraph ${p.idx + 1} for $0.005` : "Sign up to read more"}
+              aria-disabled={isPaying || undefined}
               className={[
-                "block w-full cursor-pointer text-left transition-all",
-                isPaying ? "cursor-progress" : "",
+                "block w-full text-left transition-all",
+                isPaying ? "cursor-progress" : "cursor-pointer",
               ].join(" ")}
             >
               <p
+                // Inline content has pointer-events disabled so any <a> tags
+                // rendered from markdown can't intercept the wrapper click.
                 className={[
-                  "select-none rounded-lg p-3 -mx-3",
+                  "select-none pointer-events-none rounded-lg p-3 -mx-3",
                   "blur-sm saturate-50 brightness-90",
                   isPaying ? "animate-pulse" : "group-hover:blur-[3px] group-hover:brightness-100",
                   !isPaying && "animate-pulse-soft",
@@ -256,7 +322,7 @@ export function MeteredArticle({
                   )}
                 </span>
               </span>
-            </InteractiveWrapper>
+            </div>
           </div>
         );
       })}

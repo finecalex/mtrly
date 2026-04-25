@@ -20,6 +20,24 @@
     return document.querySelector("video");
   }
 
+  // Detect YouTube ad playback. YouTube uses the same <video> element for
+  // both ads and the actual video, swapping the source. We rely on DOM
+  // signals YouTube already exposes: `.ad-showing` / `.ad-interrupting`
+  // classes on the player wrapper, plus the `.ytp-ad-player-overlay-instream-info`
+  // element that only exists during an ad. Returns true if any of those
+  // signals are present, in which case the meter pauses.
+  function isYouTubeAdPlaying() {
+    if (!/(^|\.)youtube\.com$/.test(window.location.hostname)) return false;
+    const player = document.querySelector(".html5-video-player");
+    if (player && (player.classList.contains("ad-showing") || player.classList.contains("ad-interrupting"))) {
+      return true;
+    }
+    if (document.querySelector(".ytp-ad-player-overlay, .ytp-ad-player-overlay-instream-info, .ytp-ad-skip-button, .ytp-ad-text")) {
+      return true;
+    }
+    return false;
+  }
+
   function injectPanel(match) {
     if (document.getElementById("mtrly-panel")) return;
     const panel = document.createElement("div");
@@ -88,6 +106,13 @@
   }
 
   async function tickOnce() {
+    // Don't bill while a YouTube ad is playing. The video element is "playing"
+    // during ads, but the user isn't consuming creator content, so charging
+    // them would feel broken.
+    if (isYouTubeAdPlaying()) {
+      updatePanel({ balance: lastBalance, spent, status: "paused" });
+      return;
+    }
     const res = await sendMessage({ type: "tick", sessionId: currentSessionId });
     if (!res) return;
 

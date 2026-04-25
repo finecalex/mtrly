@@ -22,6 +22,15 @@ export async function GET(req: NextRequest) {
 
   if (!content) return NextResponse.json({ match: false });
 
+  // Mtrly's own articles (/a/[id]) are stored with their own URL but kind=mtrly,
+  // and the article page handles metering itself with click-to-reveal. The
+  // extension must stay completely out of the way on those URLs — otherwise
+  // its IntersectionObserver double-charges paragraphs the user already paid
+  // for via the page's own meter.
+  if (content.kind === "mtrly") {
+    return NextResponse.json({ match: false });
+  }
+
   const price = kind === "youtube" ? PRICING.video.pricePerMinute : PRICING.text.pricePerParagraph;
 
   return NextResponse.json({
