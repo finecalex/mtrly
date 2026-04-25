@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { hashPassword, issueToken, setSessionCookie } from "@/lib/auth";
 import { provisionUserWallet } from "@/lib/wallet";
+import { provisionLocalEoa, userWalletConfigured } from "@/lib/userWallet";
+import { slugFromEmail, uniqueSlugFor } from "@/lib/profile";
 
 const schema = z.object({
   email: z.string().email(),
@@ -35,12 +37,30 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  try {
+    const baseSlug = slugFromEmail(email);
+    const slug = await uniqueSlugFor(user.id, baseSlug);
+    await db.user.update({ where: { id: user.id }, data: { slug } });
+  } catch (e) {
+    console.error("[signup] slug assignment failed:", e);
+  }
+
   let walletAddress: string | null = null;
   try {
     const wallet = await provisionUserWallet(user.id);
     walletAddress = wallet.address;
   } catch (e) {
-    console.error("[signup] wallet provisioning failed:", e);
+    console.error("[signup] Circle wallet provisioning failed:", e);
+  }
+
+  let ownedEoaAddress: string | null = null;
+  if (userWalletConfigured()) {
+    try {
+      const eoa = await provisionLocalEoa(user.id);
+      ownedEoaAddress = eoa.address;
+    } catch (e) {
+      console.error("[signup] local EOA provisioning failed:", e);
+    }
   }
 
   const token = await issueToken(user.id);
@@ -50,5 +70,6 @@ export async function POST(req: NextRequest) {
     ok: true,
     user: { id: user.id, email: user.email, displayName: user.displayName, role: user.role },
     walletAddress,
+    ownedEoaAddress,
   });
 }

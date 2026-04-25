@@ -37,6 +37,13 @@ model User {
   circleWalletAddr  String?   @unique
   walletAddress     String?
 
+  ownedEoaAddress           String?  @unique
+  ownedEoaPrivateKeyEncrypted String?
+
+  slug              String?  @unique
+  avatarUrl         String?
+  bio               String?  @db.VarChar(500)
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -125,6 +132,7 @@ model Payment {
   amountUsdc       Decimal  @db.Decimal(20, 8)
   nanopaymentTxId  String?
   onchainTxHash    String?
+  onchainFromAddress String?
   settledOnchain   Boolean  @default(false)
   createdAt        DateTime @default(now())
 

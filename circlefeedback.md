@@ -35,6 +35,8 @@ impossible with traditional L1 gas. We picked the Circle stack because:
 
 ## 3. Successes
 
+- **`depositFor(amount, depositor)` is exactly the right primitive for custodial onboarding.** Once we moved from "platform is the sole x402 buyer" to "each user has their own EOA", we needed a way for the platform to seed each user's Gateway pool without forcing the user to hold native gas or do a faucet dance. `GatewayClient.depositFor(amount, userEoa)` does this in one call — platform pays gas, user becomes the owner of the resulting Gateway balance. This enables a realistic custodial prototype where every onchain tick is signed by the actual viewer's key (visible per-user on arcscan) while the platform absorbs the gas overhead. Huge DX win vs. implementing a smart account or per-user deposit contract ourselves. (Used in `POST /api/admin/fund-user-eoa`.)
+- **`BatchEvmSigner` interface is minimal (`{ address, signTypedData }`)** — this makes it trivial to wrap non-local signers (Circle Wallets, KMS-backed keys, hardware wallets) around the same `GatewayClient` flow. We're keeping this for Phase 2 so Circle Wallets can drive the same x402 path without us forking SDK internals.
 - **v3.0.1 SDK upgrade** from v2.1 was mechanical — only the mainnet-default URL change
   required an env-configurable override. Good breaking-change semantics.
 - **`searchTransfers` by `status` + `from` filters** are exactly the right shape for a
@@ -45,6 +47,8 @@ impossible with traditional L1 gas. We picked the Circle stack because:
   transparency story ("view settlement proof ↗") easy to build.
 - **CCTP on Arc testnet** is rock-solid even when the Gateway batcher regressed — our
   deposit/withdraw flow never lost a cent during 65h of batcher downtime.
+- **Arcscan address pages double as a creator-discovery proof-of-work signal.** When we built `/c/[slug]` (public creator profile à la Patreon), the most compelling "this is real" signal we could surface is just a deep link to `testnet.arcscan.app/address/<creator-EOA>`. Visitors click through, see real onchain history, and trust the platform without any extra UI plumbing on our side. Free credibility from Circle's existing infrastructure.
+- **Per-content `payment.count({settledOnchain: true})` aggregates** turn out to be the killer signal for a leaderboard. Ranking creators by lifetime USDC alone would also work, but the "N onchain" badge next to each creator on `/leaderboard` is what turns the page from a vanity scoreboard into "these are real Arc Testnet settlements". Got this almost for free thanks to how the SDK exposes settlement state on each Payment row.
 
 ---
 
@@ -104,6 +108,9 @@ mainnet (which then 404s because testnet service IDs aren't there). The stack tr
 no hint that the chain mismatch is the root cause. We got bitten briefly; docs should
 call this out in bold in the migration notes.
 
+### 4.6a `eth_sendRawTransaction` returns "txpool is full" on Arc Testnet RPC during fund-user-eoa testing (2026-04-25)
+While building Phase 1 of our consumer flow (per-user EOA tick wallets), the platform's `GatewayClient.depositFor(amount, userEoa)` call kept failing with `Details: txpool is full` from `https://rpc.testnet.arc.network`. The approval tx (`approve(GatewayWallet, 50000)` for $0.05) couldn't be submitted at all — error returned at the RPC layer, not in the contract. Reproduced 3x in 90 seconds. Same platform EOA had been successfully sending x402 settlement txs minutes earlier. This isn't an SDK bug, but it does block onboarding flows that rely on `depositFor` — there is no way for an SDK consumer to detect "RPC node mempool saturated" vs. "I have a real bug" from the error message alone. Suggestion: surface mempool-fullness as a typed error the SDK can retry on (with backoff), or document the expected throughput / mempool depth of the public Arc Testnet RPC so devs know to use a private node for high-volume periods.
+
 ### 4.6 Status lifecycle naming
 `received` → `batched` → `confirmed` → `completed` → `failed` is four states too many
 for a UI. We ended up explaining each one in hover-tooltips. A shorter lifecycle
@@ -156,5 +163,6 @@ hackathon team days of confusion.
 
 ## 6. Changelog of this file
 
+- **2026-04-24** — §3 added `depositFor` success + `BatchEvmSigner` minimal-interface success after implementing Phase 1 per-user EOA flow
 - **2026-04-23** — initial seed: §4.1 Gateway batcher outage, §4.2 missing tx-hash in v3
   SDK, §4.3 Next.js caching, §4.5 mainnet-default URL, §5.1 status-page split proposal.

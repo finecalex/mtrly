@@ -70,8 +70,9 @@ const SELF_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export async function settleTickViaGateway(params: {
   amountUsdc: number;
-}): Promise<{ transaction: string; amount: string; formattedAmount: string }> {
-  const c = getGatewayClient();
+  buyerClient?: GatewayClient;
+}): Promise<{ transaction: string; amount: string; formattedAmount: string; buyer: string }> {
+  const c = params.buyerClient ?? getGatewayClient();
   const priceDollars = params.amountUsdc.toFixed(6);
   const url = `${SELF_URL}/api/x402/tick?price=${encodeURIComponent(priceDollars)}`;
   const res = await c.pay(url, { method: "GET" });
@@ -79,5 +80,6 @@ export async function settleTickViaGateway(params: {
     transaction: res.transaction,
     amount: res.amount.toString(),
     formattedAmount: res.formattedAmount,
+    buyer: c.address,
   };
 }

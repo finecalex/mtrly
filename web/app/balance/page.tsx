@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Wallet, Download, Play, Check, ChevronRight } from "lucide-react";
 
 type Me = {
   id: number;
@@ -18,6 +19,18 @@ type TxItem = {
   amount: string;
   createdAt: string;
   reference: string | null;
+};
+
+type MyWallet = {
+  ok: boolean;
+  configured: boolean;
+  address: string | null;
+  explorerUrl: string | null;
+  gateway: {
+    availableFormatted: string;
+    totalFormatted: string;
+    walletBalanceFormatted: string;
+  } | null;
 };
 
 type GatewayStatus = {
@@ -50,19 +63,22 @@ export default function BalancePage() {
   const [me, setMe] = useState<Me | null>(null);
   const [txs, setTxs] = useState<TxItem[]>([]);
   const [gw, setGw] = useState<GatewayStatus | null>(null);
+  const [mine, setMine] = useState<MyWallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   async function refresh() {
-    const [meRes, balRes, gwRes] = await Promise.all([
+    const [meRes, balRes, gwRes, mineRes] = await Promise.all([
       fetch("/api/auth/me").then((r) => r.json()),
       fetch("/api/balance/status").then((r) => r.json()).catch(() => null),
       fetch("/api/gateway/status").then((r) => r.json()).catch(() => null),
+      fetch("/api/wallet/mine").then((r) => r.json()).catch(() => null),
     ]);
     setMe(meRes.user);
     if (balRes && !balRes.error) setTxs(balRes.transactions ?? []);
     setGw(gwRes);
+    setMine(mineRes);
     setLoading(false);
   }
 
@@ -105,8 +121,69 @@ export default function BalancePage() {
     );
   }
 
+  const isNewUser =
+    Number(me.balance) === 0 && txs.filter((t) => t.type === "payment_out").length === 0;
+  const hasDeposit = txs.some((t) => t.type === "deposit") || Number(me.balance) > 0;
+  const hasFirstTick = txs.some((t) => t.type === "payment_out");
+
   return (
     <Shell>
+      {isNewUser && (
+        <section className="mb-8 rounded-2xl border border-accent/30 bg-creator-card p-6">
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase text-accent">
+            <Play size={12} /> Get started in 3 steps
+          </div>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight">
+            Welcome to Mtrly. Make your first tick.
+          </h2>
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <OnboardStep
+              n={1}
+              done={hasDeposit}
+              icon={<Wallet size={16} />}
+              title="Top up balance"
+              body="Send testnet USDC to your wallet, then sync."
+              cta="Scroll to deposit"
+              onClick={() => {
+                document.getElementById("deposit-section")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            />
+            <OnboardStep
+              n={2}
+              done={false}
+              icon={<Download size={16} />}
+              title="Install the extension"
+              body="Chrome → Load unpacked from /extension."
+              cta="Download .zip"
+              href="/mtrly-extension.zip"
+            />
+            <OnboardStep
+              n={3}
+              done={hasFirstTick}
+              icon={<Play size={16} />}
+              title="Try the demo"
+              body="Read a paragraph or watch a YouTube — meter ticks live."
+              cta="Open demo article"
+              href="/demo/article"
+            />
+          </div>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link
+              href="/explore"
+              className="flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm hover:border-fg"
+            >
+              Browse creators <ChevronRight size={14} />
+            </Link>
+            <Link
+              href="/leaderboard"
+              className="flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm hover:border-fg"
+            >
+              See top earners <ChevronRight size={14} />
+            </Link>
+          </div>
+        </section>
+      )}
+
       <div className="flex items-baseline justify-between">
         <div>
           <div className="font-mono text-xs uppercase text-muted">Balance</div>
@@ -121,7 +198,7 @@ export default function BalancePage() {
         </button>
       </div>
 
-      <section className="mt-10 rounded border border-border bg-surface p-5">
+      <section id="deposit-section" className="mt-10 rounded border border-border bg-surface p-5">
         <div className="font-mono text-xs uppercase text-muted">Deposit address</div>
         <div className="mt-2 break-all font-mono text-sm">
           {me.walletAddress ?? "— wallet provisioning pending —"}
@@ -162,6 +239,53 @@ export default function BalancePage() {
           </ul>
         )}
       </section>
+
+      {mine && mine.configured && (
+        <section className="mt-10 rounded border border-accent/40 bg-accent/5 p-5">
+          <div className="flex items-baseline justify-between">
+            <div>
+              <div className="font-mono text-xs uppercase text-accent">Your tick-signing wallet · Arc Testnet</div>
+              <p className="mt-1 max-w-xl text-xs text-muted">
+                This is <b>your own EOA</b> — each onchain tick is signed by this address, not by the platform.
+                Funded via Circle Gateway: platform can deposit USDC into your pool without you needing gas.
+              </p>
+            </div>
+          </div>
+          {!mine.address ? (
+            <p className="mt-3 text-sm text-muted">EOA provisioning pending — refresh in a moment.</p>
+          ) : (
+            <>
+              <div className="mt-3 break-all font-mono text-sm">{mine.address}</div>
+              <div className="mt-3 grid grid-cols-2 gap-4">
+                <div>
+                  <div className="font-mono text-[10px] uppercase text-muted">Gateway pool</div>
+                  <div className="mt-1 font-mono text-xl">
+                    ${mine.gateway?.availableFormatted ?? "0"}
+                  </div>
+                  <div className="font-mono text-[10px] text-muted">available for ticks · gasless</div>
+                </div>
+                <div>
+                  <div className="font-mono text-[10px] uppercase text-muted">EOA USDC</div>
+                  <div className="mt-1 font-mono text-xl">
+                    ${mine.gateway?.walletBalanceFormatted ?? "0"}
+                  </div>
+                  <div className="font-mono text-[10px] text-muted">onchain wallet balance</div>
+                </div>
+              </div>
+              {mine.explorerUrl && (
+                <a
+                  href={mine.explorerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-block rounded border border-accent/50 px-3 py-1.5 font-mono text-[10px] uppercase text-accent hover:bg-accent/10"
+                >
+                  View on arcscan ↗
+                </a>
+              )}
+            </>
+          )}
+        </section>
+      )}
 
       <section className="mt-10 rounded border border-border bg-surface p-5">
         <div className="flex items-baseline justify-between">
@@ -338,5 +462,63 @@ function GatewayPanel({ gw }: { gw: GatewayStatus }) {
         )}
       </div>
     </>
+  );
+}
+
+function OnboardStep({
+  n,
+  done,
+  icon,
+  title,
+  body,
+  cta,
+  href,
+  onClick,
+}: {
+  n: number;
+  done: boolean;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  cta: string;
+  href?: string;
+  onClick?: () => void;
+}) {
+  const ctaClasses =
+    "mt-3 inline-flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-[11px] uppercase hover:border-fg";
+  return (
+    <div
+      className={`relative rounded-xl border p-4 ${
+        done ? "border-green-400/40 bg-green-400/5" : "border-border bg-surface/50"
+      }`}
+    >
+      <div className="absolute right-3 top-3">
+        {done ? (
+          <span className="flex items-center gap-1 font-mono text-[10px] uppercase text-green-400">
+            <Check size={12} /> done
+          </span>
+        ) : (
+          <span className="font-mono text-[10px] uppercase text-muted">step {n}</span>
+        )}
+      </div>
+      <div
+        className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+          done ? "bg-green-400/15 text-green-400" : "bg-accent/10 text-accent"
+        }`}
+      >
+        {icon}
+      </div>
+      <h3 className="mt-2 text-sm font-semibold">{title}</h3>
+      <p className="mt-1 text-xs text-muted">{body}</p>
+      {href ? (
+        <a href={href} target={href.startsWith("/") ? undefined : "_blank"} rel="noreferrer" className={ctaClasses}>
+          {cta} <ChevronRight size={12} />
+        </a>
+      ) : (
+        <button onClick={onClick} className={ctaClasses}>
+          {cta} <ChevronRight size={12} />
+        </button>
+      )}
+    </div>
   );
 }

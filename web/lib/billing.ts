@@ -3,6 +3,7 @@ import { db } from "./db";
 import { PRICING } from "./config";
 import { getPlatformUserId } from "./platform";
 import { gatewayConfigured, settleTickViaGateway } from "./gateway";
+import { getUserGatewayClient } from "./userWallet";
 
 export type TickKind = "youtube" | "web";
 
@@ -142,11 +143,21 @@ export async function applyTick(params: {
       const amt = parseFloat(amount.toString());
       void (async () => {
         try {
-          const settle = await settleTickViaGateway({ amountUsdc: amt });
+          const userClient = await getUserGatewayClient(viewerId).catch((e) => {
+            console.error(`[x402] user gateway client load failed for user ${viewerId}:`, e);
+            return null;
+          });
+          const settle = await settleTickViaGateway({
+            amountUsdc: amt,
+            buyerClient: userClient ?? undefined,
+          });
           if (settle.transaction) {
             await db.payment.update({
               where: { id: pid },
-              data: { nanopaymentTxId: settle.transaction },
+              data: {
+                nanopaymentTxId: settle.transaction,
+                onchainFromAddress: settle.buyer,
+              },
             });
           }
         } catch (err) {

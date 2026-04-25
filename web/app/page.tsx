@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { LiveTicker } from "@/components/LiveTicker";
+import { TopCreatorsStrip } from "@/components/TopCreatorsStrip";
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-8 py-16">
+    <main className="mx-auto flex min-h-screen max-w-4xl flex-col px-8 py-16">
       <div className="font-mono text-sm text-muted">mtrly.v0.1.0 · arc testnet</div>
 
-      <h1 className="mt-6 text-6xl font-semibold tracking-tight">
-        Content, metered by the second.
+      <h1 className="mt-6 text-5xl font-semibold tracking-tight md:text-6xl">
+        Content, metered by the <span className="text-accent">second</span>.
       </h1>
 
       <p className="mt-6 max-w-2xl text-lg text-muted">
@@ -15,24 +16,24 @@ export default function Home() {
         No wallets to approve. Install the extension, top up once, consume anywhere.
       </p>
 
-      <div className="mt-10 flex flex-wrap gap-4">
+      <div className="mt-10 flex flex-wrap gap-3">
         <Link
           href="/auth/signup"
-          className="rounded border border-accent bg-accent px-5 py-3 font-mono text-sm text-bg hover:opacity-90"
+          className="rounded-lg bg-accent px-5 py-3 text-sm font-medium text-bg hover:opacity-90"
         >
           Get started →
         </Link>
         <Link
-          href="/auth/login"
-          className="rounded border border-border px-5 py-3 font-mono text-sm hover:border-fg"
+          href="/explore"
+          className="rounded-lg border border-border px-5 py-3 text-sm hover:border-fg"
         >
-          Log in
+          Explore creators
         </Link>
         <Link
-          href="/dashboard"
-          className="rounded border border-border px-5 py-3 font-mono text-sm hover:border-fg"
+          href="/leaderboard"
+          className="rounded-lg border border-border px-5 py-3 text-sm hover:border-fg"
         >
-          Creator dashboard
+          Leaderboard
         </Link>
       </div>
 
@@ -75,6 +76,10 @@ export default function Home() {
           </li>
         </ol>
       </section>
+
+      <div className="mt-20">
+        <TopCreatorsStrip />
+      </div>
 
       <section className="mt-20 border-t border-border pt-12">
         <div className="font-mono text-xs uppercase text-muted">Live onchain activity</div>

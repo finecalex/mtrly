@@ -14,6 +14,8 @@ export async function GET() {
       displayName: true,
       role: true,
       circleWalletAddr: true,
+      slug: true,
+      avatarUrl: true,
       balance: { select: { amountUsdc: true } },
     },
   });
@@ -27,6 +29,8 @@ export async function GET() {
       displayName: user.displayName,
       role: user.role,
       walletAddress: user.circleWalletAddr,
+      slug: user.slug,
+      avatarUrl: user.avatarUrl,
       balance: user.balance?.amountUsdc?.toString() ?? "0",
     },
   });
