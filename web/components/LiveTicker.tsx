@@ -71,7 +71,7 @@ export function LiveTicker() {
             <li key={p.id} className="flex items-center justify-between gap-3 border-b border-border py-2">
               <span className="text-muted shrink-0">{timeAgo(p.createdAt)}</span>
               <span className="truncate">
-                {p.content?.title ?? p.content?.normalizedUrl ?? "—"}
+                {p.content?.title ?? p.content?.normalizedUrl ?? ""}
               </span>
               <span className="flex items-center gap-3 shrink-0">
                 <span className="text-fg">${fmtAmount(p.amountUsdc)}</span>
@@ -83,7 +83,7 @@ export function LiveTicker() {
                     className="text-accent hover:underline"
                     title={p.onchainTxHash ?? ""}
                   >
-                    onchain ↗
+                    onchain
                   </a>
                 ) : (
                   <span className="text-muted">batching…</span>

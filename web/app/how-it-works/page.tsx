@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 export const metadata = {
   title: "How Mtrly works",
   description:
-    "Pay-per-second content metered through Circle Gateway on Arc Testnet — no subscriptions, no per-tick wallet popups, full onchain transparency.",
+    "Pay-per-second content metered through Circle Gateway on Arc Testnet, no subscriptions, no per-tick wallet popups, full onchain transparency.",
 };
 
 export default function HowItWorksPage() {
@@ -42,12 +42,12 @@ export default function HowItWorksPage() {
             deposit covers thousands of seconds across every creator.
           </Step>
           <Step n={2} icon={<Play size={18} />} title="Install the extension">
-            Chrome → Load unpacked from <code className="font-mono text-xs text-fg">extension/</code>. The extension watches every page you visit; if a creator
+            Chrome Load unpacked from <code className="font-mono text-xs text-fg">extension/</code>. The extension watches every page you visit; if a creator
             registered the URL, the meter starts.
           </Step>
           <Step n={3} icon={<TrendingUp size={18} />} title="Watch / read anywhere">
             $0.05/min for video, $0.005 per paragraph as soon as it scrolls into view. Native
-            Mtrly articles work without an extension — just open{" "}
+            Mtrly articles work without an extension, just open{" "}
             <code className="font-mono text-xs text-fg">/a/&lt;id&gt;</code>.
           </Step>
         </Steps>
@@ -66,7 +66,7 @@ export default function HowItWorksPage() {
           </Step>
           <Step n={3} icon={<Wallet size={18} />} title="Earn 80% per second">
             Every paid tick credits 80% to your balance, 20% to the platform. Withdraw to any Arc
-            address from your dashboard — produces 1 real onchain mint via Circle Gateway.
+            address from your dashboard, produces 1 real onchain mint via Circle Gateway.
           </Step>
         </Steps>
       </section>
@@ -75,8 +75,8 @@ export default function HowItWorksPage() {
         <SectionHeader icon={<Code2 size={16} />} label="For developers" />
         <Steps>
           <Step n={1} icon={<Code2 size={18} />} title="Built on x402 + Gateway">
-            Each tick is an HTTP 402 Payment Required → EIP-3009 transferWithAuthorization signed
-            by the viewer&apos;s EOA → batched by Circle&apos;s x402 facilitator → published as
+            Each tick is an HTTP 402 Payment Required EIP-3009 transferWithAuthorization signed
+            by the viewer&apos;s EOA batched by Circle&apos;s x402 facilitator published as
             one onchain transfer per batch on Arc Testnet.
           </Step>
           <Step n={2} icon={<ShieldCheck size={18} />} title="Verifiable end-to-end">
@@ -113,7 +113,7 @@ export default function HowItWorksPage() {
         <PriceCard
           title="$0.005 / paragraph"
           sub="text"
-          body="Paragraph-level. The moment a paragraph scrolls into view, it unlocks and debits $0.005. The first paragraph is always free as a teaser. Refresh-safe — paragraphs you paid stay unlocked."
+          body="Paragraph-level. The moment a paragraph scrolls into view, it unlocks and debits $0.005. The first paragraph is always free as a teaser. Refresh-safe, paragraphs you paid stay unlocked."
         />
       </section>
 

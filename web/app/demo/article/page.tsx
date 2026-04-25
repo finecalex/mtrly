@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Demo article — Mtrly",
+  title: "Demo article, Mtrly",
 };
 
 export default function DemoArticle() {
@@ -24,8 +24,8 @@ export default function DemoArticle() {
         <p>
           Arc is a stablecoin-native rollup where USDC is the gas token. That
           single detail matters more than it sounds. Normal L2s bill you in ETH
-          for every transaction, which means sub-cent payments are a fantasy —
-          the gas exceeds the payment. Arc flips this: if you&apos;re paying in
+          for every transaction, which means sub-cent payments are a fantasy.
+          The gas exceeds the payment. Arc flips this: if you&apos;re paying in
           USDC anyway, then a transaction that moves two-hundredths of a penny
           worth of USDC is completely coherent with the gas model. Circle&apos;s
           Nanopayments layer then batches these offchain so you don&apos;t even
@@ -33,8 +33,8 @@ export default function DemoArticle() {
         </p>
         <p>
           The Mtrly extension watches the page you&apos;re on. If the URL is
-          registered by a creator — a YouTube video, a blog post, a podcast
-          transcript — the extension opens a session with the Mtrly backend and
+          registered by a creator, a YouTube video, a blog post, a podcast
+          transcript, the extension opens a session with the Mtrly backend and
           starts a clock. Every five seconds for video, or the moment a
           paragraph scrolls into view for text, it calls the billing engine.
           The engine atomically debits your balance, credits 80% to the
@@ -54,7 +54,7 @@ export default function DemoArticle() {
         <p>
           There is an obvious question about trust. How do I know the extension
           isn&apos;t running the meter while I&apos;m making a coffee? The
-          answer is video-element event listeners — the meter only ticks while
+          answer is video-element event listeners, the meter only ticks while
           the video is actually playing, and for text only the moment a paragraph
           scrolls past the fifty-percent visibility threshold (with a tiny
           200ms debounce so flicking past doesn&apos;t bill you). The extension
@@ -64,7 +64,7 @@ export default function DemoArticle() {
         <p>
           The harder question is collusion: what stops a creator from
           registering a URL, then running a bot that opens the page a thousand
-          times to drain their own balance — or a competitor&apos;s? The honest
+          times to drain their own balance, or a competitor&apos;s? The honest
           answer is: nothing, in the hackathon build. The production design
           adds rate-limits per (viewer, creator) pair, challenge-response proofs
           of human attention, and a dispute window before offchain settlements

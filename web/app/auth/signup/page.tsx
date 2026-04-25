@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { DemoAccountButton } from "@/components/DemoAccountButton";
 
 export default function SignupPage() {
   return (
@@ -71,9 +72,17 @@ function SignupForm() {
           disabled={loading}
           className="w-full rounded border border-accent bg-accent py-3 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
         >
-          {loading ? "Creating wallet…" : "Sign up →"}
+          {loading ? "Creating wallet…" : "Sign up"}
         </button>
       </form>
+
+      <div className="mt-6 flex items-center gap-3 border-t border-border pt-5">
+        <DemoAccountButton primary label="Or try as demo viewer" />
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        Skips the form. We provision a wallet, an onchain EOA, and seed $1 of real testnet USDC
+        into your Gateway pool. Two arcscan tx per click.
+      </p>
 
       <div className="mt-6 text-sm text-muted">
         Already have an account? <Link href={`/auth/login${ext ? "?ext=1" : ""}`} className="text-fg underline">Log in</Link>

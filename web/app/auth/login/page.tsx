@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { DemoAccountButton } from "@/components/DemoAccountButton";
 
 export default function LoginPage() {
   return (
@@ -74,9 +75,17 @@ function LoginForm() {
           disabled={loading}
           className="w-full rounded border border-accent bg-accent py-3 font-mono text-sm text-bg hover:opacity-90 disabled:opacity-40"
         >
-          {loading ? "…" : "Log in →"}
+          {loading ? "…" : "Log in"}
         </button>
       </form>
+
+      <div className="mt-6 flex items-center gap-3 border-t border-border pt-5">
+        <DemoAccountButton primary label="Or try as demo viewer" />
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        Skip the form. We provision an account, $5 internal balance, and seed your onchain Gateway
+        pool from the platform. Two fresh arcscan tx per click.
+      </p>
 
       <div className="mt-6 text-sm text-muted">
         No account? <Link href={`/auth/signup${ext ? "?ext=1" : ""}`} className="text-fg underline">Sign up</Link>

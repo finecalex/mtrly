@@ -21,7 +21,7 @@ export default function ShareRow({ slug, name }: { slug: string; name: string })
     }
   }
 
-  const text = encodeURIComponent(`Pay ${name} per-second on Arc Testnet via @MtrlyHQ —`);
+  const text = encodeURIComponent(`Pay ${name} per-second on Arc Testnet via @MtrlyHQ ,`);
   const url = typeof window !== "undefined" ? encodeURIComponent(fullUrl()) : "";
 
   return (

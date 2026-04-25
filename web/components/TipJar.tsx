@@ -114,7 +114,7 @@ export function TipJar({ slug, displayName, recipientUserId }: { slug: string; d
   if (isSelf) {
     return (
       <div className="rounded-2xl border border-yellow-300/30 bg-yellow-300/5 p-4 text-sm text-muted">
-        You can&apos;t tip yourself — this is your own page.
+        You can&apos;t tip yourself, this is your own page.
       </div>
     );
   }
@@ -132,8 +132,8 @@ export function TipJar({ slug, displayName, recipientUserId }: { slug: string; d
       </div>
 
       <p className="mt-1 text-xs text-muted">
-        One-shot bonus on top of per-second metering. 80% goes to {displayName}, 20% to platform —
-        same onchain path as ticks.
+        One-shot bonus on top of per-second metering. 80% goes to {displayName}, 20% to platform.
+        Same onchain path as ticks.
       </p>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -197,7 +197,7 @@ export function TipJar({ slug, displayName, recipientUserId }: { slug: string; d
         </Button>
         {balance === 0 && (
           <a href="/balance" className="font-mono text-[10px] uppercase text-muted hover:text-fg">
-            top up balance →
+            top up balance
           </a>
         )}
       </div>

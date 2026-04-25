@@ -124,7 +124,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
             <div className="flex-1">
               <h3 className="text-sm font-semibold">First paragraph is on the house.</h3>
               <p className="mt-1 text-sm text-muted">
-                Mtrly meters reading paragraph by paragraph — the moment you scroll a paragraph
+                Mtrly meters reading paragraph by paragraph, the moment you scroll a paragraph
                 into view, it unlocks and $0.005 flows from your balance to the creator. Sign up
                 to keep reading.
               </p>
@@ -133,7 +133,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
                   href={`/auth/signup?next=/a/${article.id}`}
                   className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-bg hover:opacity-90"
                 >
-                  Sign up to read →
+                  Sign up to read
                 </Link>
                 <Link
                   href={`/auth/login?next=/a/${article.id}`}
@@ -167,7 +167,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
         <div className="mt-12 rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
           <h3 className="text-lg font-semibold">{paragraphs.length - 1} more paragraphs locked</h3>
           <p className="mt-1 text-sm text-muted">
-            Sign up to unlock — pay only for what you actually read.
+            Sign up to unlock, pay only for what you actually read.
           </p>
           <Link
             href={`/auth/signup?next=/a/${article.id}`}
@@ -183,7 +183,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
           <p>
             <Sparkles size={14} className="mr-1 inline" />
             Install the Mtrly extension to meter your reading. Each paragraph debits $0.005 the
-            moment it scrolls into view. Refresh-safe — you don&apos;t pay twice for paragraphs
+            moment it scrolls into view. Refresh-safe, you don&apos;t pay twice for paragraphs
             you already paid for.
           </p>
         </section>
@@ -194,7 +194,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
           <p className="font-mono text-[11px] uppercase text-yellow-300">Owner preview</p>
           <p className="mt-1 text-muted">
             You&apos;re viewing your own article. Earnings stats include all paid reads from other
-            users — view the full breakdown in{" "}
+            users, view the full breakdown in{" "}
             <Link href="/dashboard" className="underline">
               your dashboard
             </Link>

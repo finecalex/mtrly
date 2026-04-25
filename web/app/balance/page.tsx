@@ -153,7 +153,7 @@ export default function BalancePage() {
               done={false}
               icon={<Download size={16} />}
               title="Install the extension"
-              body="Chrome → Load unpacked from /extension."
+              body="Chrome Load unpacked from /extension."
               cta="Download .zip"
               href="/mtrly-extension.zip"
             />
@@ -162,7 +162,7 @@ export default function BalancePage() {
               done={hasFirstTick}
               icon={<Play size={16} />}
               title="Try the demo"
-              body="Read a paragraph or watch a YouTube — meter ticks live."
+              body="Read a paragraph or watch a YouTube, meter ticks live."
               cta="Open demo article"
               href="/demo/article"
             />
@@ -201,7 +201,7 @@ export default function BalancePage() {
       <section id="deposit-section" className="mt-10 rounded border border-border bg-surface p-5">
         <div className="font-mono text-xs uppercase text-muted">Deposit address</div>
         <div className="mt-2 break-all font-mono text-sm">
-          {me.walletAddress ?? "— wallet provisioning pending —"}
+          {me.walletAddress ?? ", wallet provisioning pending ,"}
         </div>
         <p className="mt-3 text-xs text-muted">
           Send USDC on Arc Testnet to this address (get test USDC from{" "}
@@ -246,13 +246,13 @@ export default function BalancePage() {
             <div>
               <div className="font-mono text-xs uppercase text-accent">Your tick-signing wallet · Arc Testnet</div>
               <p className="mt-1 max-w-xl text-xs text-muted">
-                This is <b>your own EOA</b> — each onchain tick is signed by this address, not by the platform.
+                This is <b>your own EOA</b>, each onchain tick is signed by this address, not by the platform.
                 Funded via Circle Gateway: platform can deposit USDC into your pool without you needing gas.
               </p>
             </div>
           </div>
           {!mine.address ? (
-            <p className="mt-3 text-sm text-muted">EOA provisioning pending — refresh in a moment.</p>
+            <p className="mt-3 text-sm text-muted">EOA provisioning pending, refresh in a moment.</p>
           ) : (
             <>
               <div className="mt-3 break-all font-mono text-sm">{mine.address}</div>
@@ -283,7 +283,7 @@ export default function BalancePage() {
                   rel="noreferrer"
                   className="mt-4 inline-block rounded border border-accent/50 px-3 py-1.5 font-mono text-[10px] uppercase text-accent hover:bg-accent/10"
                 >
-                  View on arcscan ↗
+                  View on arcscan
                 </a>
               )}
             </>
@@ -297,11 +297,11 @@ export default function BalancePage() {
             <div className="font-mono text-xs uppercase text-muted">Platform settlement layer · Circle Gateway</div>
             <p className="mt-1 max-w-xl text-xs text-muted">
               This is the <b>platform demo-buyer EOA</b>, not your wallet. Each viewer tick is batched through this
-              address onto Arc Testnet via Circle Gateway. Transfers below are server-side settlements — not
+              address onto Arc Testnet via Circle Gateway. Transfers below are server-side settlements, not
               charges to your account.
             </p>
           </div>
-          <div className="font-mono text-[10px] text-muted">{gw?.chain ?? "—"}</div>
+          <div className="font-mono text-[10px] text-muted">{gw?.chain ?? ""}</div>
         </div>
         {!gw?.ok ? (
           <p className="mt-3 text-sm text-muted">
@@ -318,7 +318,7 @@ export default function BalancePage() {
         </form>
         {me.role === "creator" && (
           <Link href="/dashboard" className="rounded border border-border px-3 py-2 font-mono text-xs hover:border-fg">
-            Creator dashboard →
+            Creator dashboard
           </Link>
         )}
       </div>
@@ -406,14 +406,14 @@ function GatewayPanel({ gw }: { gw: GatewayStatus }) {
               rel="noreferrer"
               className="shrink-0 rounded border border-green-400/50 px-3 py-1.5 font-mono text-[10px] uppercase text-green-400 hover:bg-green-400/10"
             >
-              View on arcscan ↗
+              View on arcscan
             </a>
           </div>
         </div>
       )}
       <p className="mt-2 font-mono text-[10px] text-muted">
         Circle testnet batcher runs ~every 2h at the top of the hour (e.g. 19:00, 21:00, 23:00 UTC).
-        Transfers move <span className="text-muted">received</span> → <span className="text-yellow-300">batched</span> →
+        Transfers move <span className="text-muted">received</span> <span className="text-yellow-300">batched</span>
         <span className="text-accent"> confirmed</span> in ~4-6h total on testnet.
       </p>
       <div className="mt-4">
@@ -446,10 +446,10 @@ function GatewayPanel({ gw }: { gw: GatewayStatus }) {
                     <span className="text-muted">{new Date(t.createdAt).toLocaleString()}</span>
                     {t.explorerUrl ? (
                       <a href={t.explorerUrl} target="_blank" rel="noreferrer" className="text-accent underline">
-                        arcscan ↗
+                        arcscan
                       </a>
                     ) : (
-                      <span className="text-muted">—</span>
+                      <span className="text-muted">,</span>
                     )}
                   </div>
                 </li>
@@ -459,7 +459,7 @@ function GatewayPanel({ gw }: { gw: GatewayStatus }) {
         )}
         {failed.length > 0 && showFailed && (
           <p className="mt-2 font-mono text-[10px] text-muted">
-            "failed" here means Circle Gateway's testnet batch-bundler returned an error — funds were
+            "failed" here means Circle Gateway's testnet batch-bundler returned an error, funds were
             automatically returned to the Gateway available balance, no USDC was lost. Often transient
             on testnet.
           </p>
@@ -563,7 +563,7 @@ function TopUpGatewayPool({ balance, onDone }: { balance: number; onDone: () => 
       <div className="font-mono text-[10px] uppercase text-muted">Top up Gateway pool from Mtrly balance</div>
       <p className="font-mono text-[10px] text-muted">
         Moves USDC from your internal balance to your onchain Gateway pool. Once funded, ticks
-        settle from your own pool — every onchain tx is signed by your EOA, not the platform&apos;s.
+        settle from your own pool, every onchain tx is signed by your EOA, not the platform&apos;s.
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[140px]">
@@ -608,7 +608,7 @@ function TopUpGatewayPool({ balance, onDone }: { balance: number; onDone: () => 
           <span>Funded.</span>
           {result.explorerUrl && (
             <a href={result.explorerUrl} target="_blank" rel="noreferrer" className="underline">
-              arcscan ↗
+              arcscan
             </a>
           )}
         </div>

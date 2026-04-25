@@ -88,7 +88,7 @@ export function TopArticlesStrip() {
                 )}
                 <div className="mt-auto flex items-center justify-between gap-2 pt-2 font-mono text-[10px] text-muted">
                   <span className="truncate">
-                    by {a.creator.displayName ?? a.creator.slug ?? "—"}
+                    by {a.creator.displayName ?? a.creator.slug ?? ""}
                   </span>
                   <span className="flex items-center gap-1 shrink-0">
                     <span className="tabular-nums text-accent">${earned.toFixed(4)}</span>

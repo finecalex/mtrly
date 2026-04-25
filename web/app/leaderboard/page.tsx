@@ -70,7 +70,7 @@ export default function LeaderboardPage() {
         </h1>
         <p className="max-w-2xl text-muted">
           Ranked by lifetime USDC earned per-second. Every dollar is settled onchain on Arc Testnet
-          via Circle Gateway — click any creator to verify their wallet on arcscan.
+          via Circle Gateway, click any creator to verify their wallet on arcscan.
         </p>
       </header>
 
@@ -149,7 +149,7 @@ export default function LeaderboardPage() {
                         {item.onchainSettledCount > 0 ? (
                           <Badge variant="onchain">{item.onchainSettledCount}</Badge>
                         ) : (
-                          <span className="font-mono text-xs text-muted">—</span>
+                          <span className="font-mono text-xs text-muted">,</span>
                         )}
                       </td>
                       <td className="hidden px-4 py-3 text-right font-mono text-xs text-muted md:table-cell">
@@ -228,7 +228,7 @@ function PodiumCard({ item, order }: { item: Item; order: number }) {
               {item.displayName ?? item.slug}
             </Link>
           ) : (
-            <span className="text-base font-semibold">{item.displayName ?? "—"}</span>
+            <span className="text-base font-semibold">{item.displayName ?? ""}</span>
           )}
           {item.slug && (
             <div className="font-mono text-[10px] uppercase text-muted">/c/{item.slug}</div>
@@ -268,7 +268,7 @@ function CreatorRow({ item }: { item: Item }) {
         seed={item.slug ?? String(item.userId)}
         src={item.avatarUrl ?? undefined}
       />
-      <span className="text-sm font-medium">{item.displayName ?? item.slug ?? "—"}</span>
+      <span className="text-sm font-medium">{item.displayName ?? item.slug ?? ""}</span>
     </div>
   );
   return item.slug ? (

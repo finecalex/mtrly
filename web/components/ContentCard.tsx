@@ -199,7 +199,7 @@ function CreatorRow({ creator }: { creator: NonNullable<ContentCardItem["creator
         seed={slug ?? String(creator.id)}
         src={creator.avatarUrl ?? undefined}
       />
-      <span className="truncate font-medium">{creator.displayName ?? slug ?? "—"}</span>
+      <span className="truncate font-medium">{creator.displayName ?? slug ?? ""}</span>
       {slug && <span className="font-mono text-[10px] text-muted">/c/{slug}</span>}
     </div>
   );

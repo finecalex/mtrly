@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       const path = "/app/recovery-entity-secret.dat";
       await writeFile(path, recovery).catch(() => null);
     }
-    return NextResponse.json({ ok: true, note: "Entity Secret registered. Recovery file (if any) saved to /app/recovery-entity-secret.dat — grab it and back up." });
+    return NextResponse.json({ ok: true, note: "Entity Secret registered. Recovery file (if any) saved to /app/recovery-entity-secret.dat, grab it and back up." });
   } catch (e: any) {
     const msg: string = e?.response?.data?.message ?? e?.message ?? String(e);
     if (msg.toLowerCase().includes("already")) {

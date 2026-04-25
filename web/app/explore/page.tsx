@@ -86,7 +86,7 @@ export default function ExplorePage() {
         </h1>
         <p className="max-w-2xl text-muted">
           Every paragraph read or second watched flows USDC from your balance to the creator's
-          wallet — settled onchain on Arc Testnet via Circle Gateway. No subscriptions, no tipping
+          wallet, settled onchain on Arc Testnet via Circle Gateway. No subscriptions, no tipping
           buttons.
         </p>
         {!isAuthed && (
@@ -95,7 +95,7 @@ export default function ExplorePage() {
             <Link href="/auth/signup" className="font-medium text-accent hover:underline">
               sign up
             </Link>
-            . Watching always pays the creator — the URL stays hidden so the meter can't be skipped.
+            . Watching always pays the creator, the URL stays hidden so the meter can't be skipped.
           </p>
         )}
       </header>
@@ -154,7 +154,7 @@ export default function ExplorePage() {
         <Skeleton />
       ) : items.length === 0 ? (
         <div className="mt-16 rounded-xl border border-dashed border-border p-12 text-center text-muted">
-          No content yet. Be the first creator —{" "}
+          No content yet. Be the first creator ,{" "}
           <Link href="/auth/signup" className="text-accent hover:underline">
             sign up
           </Link>{" "}

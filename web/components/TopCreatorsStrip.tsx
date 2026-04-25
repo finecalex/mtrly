@@ -63,7 +63,7 @@ export function TopCreatorsStrip() {
                 />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium">
-                    {c.displayName ?? c.slug ?? "—"}
+                    {c.displayName ?? c.slug ?? ""}
                   </div>
                   <div className="font-mono text-[10px] uppercase text-muted">#{c.rank}</div>
                 </div>

@@ -104,10 +104,10 @@ export default function SettingsPage() {
         <div className="font-mono text-xs uppercase text-muted">mtrly / settings</div>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Profile</h1>
         <p className="mt-1 text-sm text-muted">
-          Your public page is at <span className="font-mono text-fg">/c/{profile.slug ?? "—"}</span>
+          Your public page is at <span className="font-mono text-fg">/c/{profile.slug ?? ""}</span>
           {profile.slug && (
             <Link href={`/c/${profile.slug}`} className="ml-2 text-accent hover:underline">
-              view ↗
+              view
             </Link>
           )}
         </p>

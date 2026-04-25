@@ -58,7 +58,7 @@ export async function GET() {
         explorerUrl: `https://testnet.arcscan.app/address/${c.address}`,
       };
     } catch (e) {
-      // ignore — gateway optional
+      // ignore, gateway optional
     }
   }
 

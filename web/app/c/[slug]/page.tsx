@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
 import { ContentCard } from "@/components/ContentCard";
 import { TipJar } from "@/components/TipJar";
+import { TipsFeed } from "@/components/TipsFeed";
 import ShareRow from "./ShareRow";
 
 export const dynamic = "force-dynamic";
@@ -173,14 +174,24 @@ export default async function CreatorPage({ params }: { params: { slug: string }
         <TipJar slug={c.slug ?? ""} displayName={c.displayName ?? c.slug ?? "creator"} recipientUserId={c.id} />
       </div>
 
+      <section className="mt-10">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-lg font-semibold">Recent tips</h2>
+          <span className="font-mono text-[10px] uppercase text-muted">last 6 with a note</span>
+        </div>
+        <div className="mt-3">
+          <TipsFeed toSlug={c.slug ?? undefined} limit={6} />
+        </div>
+      </section>
+
       <section className="mt-8 rounded-xl border border-accent/30 bg-accent/5 p-6">
         <div className="flex items-start gap-3">
           <Sparkles size={20} className="mt-1 text-accent" />
           <div className="flex-1">
             <h3 className="text-lg font-semibold">How to support {c.displayName ?? c.slug}</h3>
             <p className="mt-1 text-sm text-muted">
-              Two ways: (1) Tip jar above — one-shot bonus that settles immediately. (2) Per-second
-              metering — top up your balance once, install the extension, and read/watch their
+              Two ways: (1) Tip jar above, one-shot bonus that settles immediately. (2) Per-second
+              metering, top up your balance once, install the extension, and read/watch their
               content; every paragraph or second flows USDC to their wallet through Circle Gateway.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
@@ -188,7 +199,7 @@ export default async function CreatorPage({ params }: { params: { slug: string }
                 href="/auth/signup"
                 className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-bg hover:opacity-90"
               >
-                Sign up to support →
+                Sign up to support
               </Link>
               <Link
                 href="/balance"

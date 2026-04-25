@@ -82,7 +82,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
             rel="noreferrer"
             className="mt-1 inline-block font-mono text-[10px] uppercase text-accent hover:underline"
           >
-            {toast.hrefLabel ?? "open"} ↗
+            {toast.hrefLabel ?? "open"}
           </a>
         )}
       </div>

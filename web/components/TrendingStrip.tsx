@@ -98,7 +98,7 @@ export function TrendingStrip() {
                     seed={it.creator.slug ?? String(it.creator.id)}
                     src={it.creator.avatarUrl ?? undefined}
                   />
-                  <span className="truncate">{it.creator.displayName ?? it.creator.slug ?? "—"}</span>
+                  <span className="truncate">{it.creator.displayName ?? it.creator.slug ?? ""}</span>
                 </div>
               </div>
               <div className="text-right">

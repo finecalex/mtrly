@@ -332,7 +332,7 @@ export default function DashboardPage() {
                 Withdrew ${fmt(wdResult.amount)} to{" "}
                 <span className="break-all">{wdResult.recipient}</span> ·{" "}
                 <a href={wdResult.explorerUrl} target="_blank" rel="noreferrer" className="text-accent underline">
-                  arcscan ↗
+                  arcscan
                 </a>
               </div>
             )}
@@ -357,7 +357,7 @@ export default function DashboardPage() {
             rel="noopener noreferrer"
             className="shrink-0 rounded-lg border border-green-400/50 px-3 py-1.5 font-mono text-[10px] uppercase text-green-400 hover:bg-green-400/10"
           >
-            arcscan ↗
+            arcscan
           </a>
         </section>
       )}
@@ -471,7 +471,7 @@ export default function DashboardPage() {
             </div>
             {publishedArticle && (
               <div className="rounded border border-accent/30 bg-accent/5 p-3 text-sm">
-                Published →{" "}
+                Published{" "}
                 <a href={publishedArticle} className="text-accent underline" target="_blank" rel="noreferrer">
                   {publishedArticle}
                 </a>
@@ -501,7 +501,7 @@ export default function DashboardPage() {
                 onEdit={() => setEditing(c)}
                 onDelete={async () => {
                   const label = c.title ?? c.normalizedUrl;
-                  if (!confirm(`Delete "${label}"? This cannot be undone — all view sessions and consumption history will also be removed.`)) return;
+                  if (!confirm(`Delete "${label}"? This cannot be undone, all view sessions and consumption history will also be removed.`)) return;
                   const res = await fetch(`/api/creator/content?id=${c.id}`, { method: "DELETE" });
                   if (!res.ok) {
                     const data = await res.json().catch(() => ({}));
@@ -525,7 +525,7 @@ export default function DashboardPage() {
             {earnings.recent.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3 border-b border-border py-2">
                 <span className="text-muted shrink-0">{new Date(p.createdAt).toLocaleString()}</span>
-                <span className="truncate">{p.content?.title ?? p.content?.normalizedUrl ?? "—"}</span>
+                <span className="truncate">{p.content?.title ?? p.content?.normalizedUrl ?? ""}</span>
                 <span className="flex items-center gap-3 shrink-0">
                   {p.explorerUrl ? (
                     <a
@@ -535,7 +535,7 @@ export default function DashboardPage() {
                       title={p.onchainTxHash ?? ""}
                       className="text-accent hover:underline"
                     >
-                      onchain ↗
+                      onchain
                     </a>
                   ) : p.nanopaymentTxId ? (
                     <span className="text-muted" title={p.nanopaymentTxId}>batching…</span>
