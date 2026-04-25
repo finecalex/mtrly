@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import { PRICING } from "@/lib/config";
+import { arcExplorerTx, platformGatewayExplorerUrl } from "@/lib/gateway";
 
 const SHARE = new Prisma.Decimal(PRICING.split.creator);
 
@@ -72,7 +73,11 @@ export async function GET() {
       nanopaymentTxId: p.nanopaymentTxId,
       onchainTxHash: p.onchainTxHash,
       settledOnchain: p.settledOnchain,
-      explorerUrl: p.onchainTxHash ? `https://testnet.arcscan.app/tx/${p.onchainTxHash}` : null,
+      explorerUrl: p.onchainTxHash
+        ? arcExplorerTx(p.onchainTxHash)
+        : p.settledOnchain
+          ? platformGatewayExplorerUrl()
+          : null,
     })),
   });
 }

@@ -7,11 +7,13 @@ type Activity = {
   totalOnchainTicks: number;
   totalConfirmed: number;
   totalVolumeUsdc: string;
+  platformExplorerUrl?: string | null;
   items: Array<{
     id: number;
     amountUsdc: string;
     createdAt: string;
     onchainTxHash: string | null;
+    nanopaymentTxId?: string | null;
     settledOnchain: boolean;
     explorerUrl: string | null;
     content: { title: string | null; normalizedUrl: string; kind: string } | null;
@@ -128,16 +130,28 @@ export function LiveTicker() {
                 </span>
                 <span className="flex items-center gap-3 shrink-0">
                   <span className="text-fg tabular-nums">${fmtAmount(p.amountUsdc)}</span>
-                  {p.explorerUrl ? (
+                  {p.onchainTxHash && p.explorerUrl ? (
                     <a
                       href={p.explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 rounded-md border border-green-400/30 bg-green-400/5 px-1.5 py-0.5 text-[10px] text-green-400 hover:bg-green-400/10"
-                      title={p.onchainTxHash ?? ""}
+                      title={p.onchainTxHash}
                     >
                       <ShieldCheck size={10} />
                       <span className="font-mono">{shortHash(p.onchainTxHash)}</span>
+                      <ExternalLink size={9} />
+                    </a>
+                  ) : p.settledOnchain && p.explorerUrl ? (
+                    <a
+                      href={p.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 rounded-md border border-green-400/20 bg-green-400/5 px-1.5 py-0.5 text-[10px] text-green-400/90 hover:bg-green-400/10"
+                      title={p.nanopaymentTxId ? `Gateway batch ${p.nanopaymentTxId}` : "Gateway batch"}
+                    >
+                      <ShieldCheck size={10} />
+                      <span className="font-mono">batch</span>
                       <ExternalLink size={9} />
                     </a>
                   ) : (

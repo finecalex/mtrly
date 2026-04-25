@@ -66,6 +66,19 @@ export function arcExplorerTx(hash: string): string {
   return `https://testnet.arcscan.app/tx/${hash}`;
 }
 
+export function arcExplorerAddr(addr: string): string {
+  return `https://testnet.arcscan.app/address/${addr}`;
+}
+
+export function platformGatewayExplorerUrl(): string | null {
+  if (!gatewayConfigured()) return null;
+  try {
+    return arcExplorerAddr(getGatewayClient().address);
+  } catch {
+    return null;
+  }
+}
+
 const SELF_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export async function settleTickViaGateway(params: {

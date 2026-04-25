@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { arcExplorerTx, platformGatewayExplorerUrl } from "@/lib/gateway";
 
 export const dynamic = "force-dynamic";
 
@@ -29,17 +30,25 @@ export async function GET() {
     where: { settledOnchain: true },
   });
 
+  const platformExplorer = platformGatewayExplorerUrl();
+
   return NextResponse.json({
     totalOnchainTicks: totalAgg._count,
     totalConfirmed: confirmedAgg,
     totalVolumeUsdc: totalAgg._sum.amountUsdc?.toString() ?? "0",
+    platformExplorerUrl: platformExplorer,
     items: rows.map((p) => ({
       id: p.id,
       amountUsdc: p.amountUsdc.toString(),
       createdAt: p.createdAt,
       onchainTxHash: p.onchainTxHash,
+      nanopaymentTxId: p.nanopaymentTxId,
       settledOnchain: p.settledOnchain,
-      explorerUrl: p.onchainTxHash ? `https://testnet.arcscan.app/tx/${p.onchainTxHash}` : null,
+      explorerUrl: p.onchainTxHash
+        ? arcExplorerTx(p.onchainTxHash)
+        : p.settledOnchain && platformExplorer
+          ? platformExplorer
+          : null,
       content: p.content ? { title: p.content.title, normalizedUrl: p.content.normalizedUrl, kind: p.content.kind } : null,
     })),
   });
