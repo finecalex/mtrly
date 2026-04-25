@@ -94,8 +94,12 @@ export default function StatsPage() {
             <BigStat
               icon={<ShieldCheck size={16} />}
               label="Onchain settled"
-              value={stats.totals.onchainSettled.toString()}
-              sub={`Verifiable on Arc Testnet`}
+              value={(stats.gateway?.completed ?? stats.totals.onchainSettled).toString()}
+              sub={
+                stats.gateway?.completed
+                  ? `${stats.totals.onchainSettled} confirmed in our ledger, ${stats.gateway.completed} batched on Arc`
+                  : `Verifiable on Arc Testnet`
+              }
               green
             />
             <BigStat
