@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Pencil, ExternalLink, BookOpen, Youtube, FileText, Wallet, Share2, Eye } from "lucide-react";
+import { Pencil, ExternalLink, BookOpen, Youtube, FileText, Wallet, Share2, Eye, Trash2 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Card as UICard, CardContent, CardHeader } from "@/components/ui/Card";
@@ -461,6 +461,17 @@ export default function DashboardPage() {
                 content={c}
                 earnings={earnings?.perContent.find((p) => p.contentId === c.id)}
                 onEdit={() => setEditing(c)}
+                onDelete={async () => {
+                  const label = c.title ?? c.normalizedUrl;
+                  if (!confirm(`Delete "${label}"? This cannot be undone — all view sessions and consumption history will also be removed.`)) return;
+                  const res = await fetch(`/api/creator/content?id=${c.id}`, { method: "DELETE" });
+                  if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    alert(`Delete failed: ${data.error ?? res.status}`);
+                    return;
+                  }
+                  refresh();
+                }}
               />
             ))}
           </div>
@@ -528,10 +539,12 @@ function ContentRow({
   content,
   earnings,
   onEdit,
+  onDelete,
 }: {
   content: ContentItem;
   earnings?: { amountUsdc: string; payments: number };
   onEdit: () => void;
+  onDelete: () => void;
 }) {
   const isMtrly = content.kind === "mtrly";
   const isYoutube = content.kind === "youtube";
@@ -607,6 +620,13 @@ function ContentRow({
                   <ExternalLink size={13} />
                 </a>
               )}
+              <button
+                onClick={onDelete}
+                title="Delete"
+                className="rounded-md p-1.5 text-muted hover:bg-red-500/10 hover:text-red-400"
+              >
+                <Trash2 size={13} />
+              </button>
             </div>
           </div>
         </div>

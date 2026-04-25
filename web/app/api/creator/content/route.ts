@@ -153,3 +153,20 @@ export async function PATCH(req: NextRequest) {
   });
   return NextResponse.json({ ok: true, content: updated });
 }
+
+export async function DELETE(req: NextRequest) {
+  const uid = await currentUserId();
+  if (!uid) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  const url = new URL(req.url);
+  const idParam = url.searchParams.get("id");
+  const id = idParam ? parseInt(idParam, 10) : NaN;
+  if (!Number.isFinite(id) || id <= 0) {
+    return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+  }
+  const item = await db.contentUrl.findUnique({ where: { id } });
+  if (!item || item.creatorId !== uid) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  await db.contentUrl.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

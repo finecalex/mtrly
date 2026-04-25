@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Lock, Sparkles, ShieldCheck, ExternalLink } from "lucide-react";
+import { Lock, Sparkles, ShieldCheck, ExternalLink, BookOpen, ArrowRight } from "lucide-react";
 import { db } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
-import { splitParagraphs, renderInline, readTimeMinutes } from "@/lib/articleBody";
+import { splitParagraphs, renderInline, readTimeMinutes, firstParagraphPreview } from "@/lib/articleBody";
 import { hashGradient } from "@/lib/gradients";
 
 export const dynamic = "force-dynamic";
@@ -30,15 +30,27 @@ async function loadArticle(id: number) {
   const onchain = await db.payment.count({
     where: { contentId: article.id, settledOnchain: true },
   });
-  return { article, stats: { ...stats, onchain } };
+  const moreByAuthor = await db.contentUrl.findMany({
+    where: { creatorId: article.creator.id, kind: "mtrly", id: { not: article.id } },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+    select: { id: true, title: true, description: true, createdAt: true, bodyMarkdown: true },
+  });
+  return { article, stats: { ...stats, onchain }, moreByAuthor };
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
   const data = await loadArticle(parseInt(params.id, 10));
   if (!data) return { title: "Article not found · Mtrly" };
+  const title = data.article.title ?? "Article";
+  const description =
+    data.article.description ??
+    `${readTimeMinutes(data.article.bodyMarkdown ?? "")} min read on Mtrly. Pay-per-paragraph nanopayments on Arc Testnet.`;
   return {
-    title: `${data.article.title ?? "Article"} · Mtrly`,
-    description: data.article.description ?? undefined,
+    title,
+    description,
+    openGraph: { title, description, type: "article" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -47,7 +59,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
   const data = await loadArticle(id);
   if (!data) notFound();
 
-  const { article, stats } = data;
+  const { article, stats, moreByAuthor } = data;
   const creator = article.creator;
   const slug = creator.slug;
   const uid = await currentUserId();
@@ -188,6 +200,73 @@ export default async function ArticlePage({ params }: { params: { id: string } }
             </Link>
             .
           </p>
+        </section>
+      )}
+
+      {creator.bio && (
+        <section className="mt-12 rounded-xl border border-border bg-surface/50 p-5">
+          <div className="flex items-start gap-3">
+            <Avatar
+              size={44}
+              name={creator.displayName}
+              email={null}
+              seed={slug ?? String(creator.id)}
+              src={creator.avatarUrl ?? undefined}
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium">About {creator.displayName ?? slug}</div>
+              <p className="mt-1 text-sm text-muted">{creator.bio}</p>
+              {slug && (
+                <Link
+                  href={`/c/${slug}`}
+                  className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] uppercase text-accent hover:underline"
+                >
+                  View all content <ArrowRight size={11} />
+                </Link>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {moreByAuthor.length > 0 && (
+        <section className="mt-10">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">More by {creator.displayName ?? slug}</h2>
+            {slug && (
+              <Link href={`/c/${slug}`} className="flex items-center gap-1 font-mono text-[10px] uppercase text-muted hover:text-fg">
+                all <ArrowRight size={11} />
+              </Link>
+            )}
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+            {moreByAuthor.map((m) => {
+              const g = hashGradient(`mtrly-${m.id}-${m.title ?? ""}`);
+              const preview = firstParagraphPreview(m.bodyMarkdown ?? "", 120);
+              return (
+                <Link
+                  key={m.id}
+                  href={`/a/${m.id}`}
+                  className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface/50 transition-colors hover:border-accent/40"
+                >
+                  <div
+                    className="flex aspect-video w-full items-center justify-center"
+                    style={{ background: g }}
+                  >
+                    <BookOpen size={24} className="text-white/70" />
+                  </div>
+                  <div className="flex-1 p-3">
+                    <div className="line-clamp-2 text-sm font-semibold">{m.title ?? "Untitled"}</div>
+                    {(m.description || preview) && (
+                      <p className="mt-1 line-clamp-2 text-xs text-muted">
+                        {m.description ?? preview}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </section>
       )}
 

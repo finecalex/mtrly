@@ -272,6 +272,10 @@ export default function BalancePage() {
                   <div className="font-mono text-[10px] text-muted">onchain wallet balance</div>
                 </div>
               </div>
+              <TopUpGatewayPool
+                balance={Number(me.balance)}
+                onDone={() => refresh()}
+              />
               {mine.explorerUrl && (
                 <a
                   href={mine.explorerUrl}
@@ -520,5 +524,98 @@ function OnboardStep({
         </button>
       )}
     </div>
+  );
+}
+
+function TopUpGatewayPool({ balance, onDone }: { balance: number; onDone: () => void }) {
+  const [amount, setAmount] = useState("0.05");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; explorerUrl?: string | null; message?: string } | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setResult(null);
+    try {
+      const res = await fetch("/api/balance/top-up-gateway-pool", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ amountUsdc: amount }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResult({ ok: false, message: data.error ?? data.message ?? "failed" });
+      } else {
+        setResult({ ok: true, explorerUrl: data.explorerUrl ?? null });
+        onDone();
+      }
+    } catch (err) {
+      setResult({ ok: false, message: err instanceof Error ? err.message : "failed" });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const overBalance = parseFloat(amount || "0") > balance;
+
+  return (
+    <form onSubmit={submit} className="mt-4 flex flex-col gap-2 rounded-lg border border-border bg-bg/40 p-3">
+      <div className="font-mono text-[10px] uppercase text-muted">Top up Gateway pool from Mtrly balance</div>
+      <p className="font-mono text-[10px] text-muted">
+        Moves USDC from your internal balance to your onchain Gateway pool. Once funded, ticks
+        settle from your own pool — every onchain tx is signed by your EOA, not the platform&apos;s.
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative flex-1 min-w-[140px]">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted">$</span>
+          <input
+            type="number"
+            min="0.001"
+            max={balance.toFixed(6)}
+            step="0.001"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="w-full rounded-md border border-border bg-surface pl-6 pr-2 py-1.5 font-mono text-sm focus:border-fg focus:outline-none"
+          />
+        </div>
+        <button
+          type="button"
+          onClick={() => setAmount(Math.min(balance, 1).toFixed(4))}
+          className="rounded-md border border-border px-2 py-1.5 font-mono text-[10px] uppercase text-muted hover:border-fg hover:text-fg"
+        >
+          $1
+        </button>
+        <button
+          type="button"
+          onClick={() => setAmount(balance.toFixed(4))}
+          className="rounded-md border border-border px-2 py-1.5 font-mono text-[10px] uppercase text-muted hover:border-fg hover:text-fg"
+        >
+          Max
+        </button>
+        <button
+          type="submit"
+          disabled={busy || overBalance || parseFloat(amount || "0") <= 0}
+          className="rounded-md border border-accent bg-accent px-3 py-1.5 font-mono text-[10px] uppercase text-bg hover:opacity-90 disabled:opacity-40"
+        >
+          {busy ? "Funding…" : "Fund pool"}
+        </button>
+      </div>
+      {overBalance && (
+        <div className="font-mono text-[10px] text-red-400">Exceeds your Mtrly balance.</div>
+      )}
+      {result?.ok && (
+        <div className="flex items-center gap-2 font-mono text-[10px] text-accent">
+          <span>Funded.</span>
+          {result.explorerUrl && (
+            <a href={result.explorerUrl} target="_blank" rel="noreferrer" className="underline">
+              arcscan ↗
+            </a>
+          )}
+        </div>
+      )}
+      {result && !result.ok && (
+        <div className="font-mono text-[10px] text-red-400">Failed: {result.message}</div>
+      )}
+    </form>
   );
 }

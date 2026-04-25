@@ -66,10 +66,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!data) return { title: "Creator not found · Mtrly" };
   const c = data.creator;
   const earned = parseFloat(data.stats.lifetimeEarnedUsdc).toFixed(4);
+  const title = `${c.displayName ?? c.slug} on Mtrly`;
+  const description =
+    c.bio ?? `Pay-per-second creator on Arc Testnet. Lifetime earned: $${earned} USDC.`;
   return {
-    title: `${c.displayName ?? c.slug} on Mtrly`,
-    description:
-      c.bio ?? `Pay-per-second creator on Arc Testnet. Lifetime earned: $${earned} USDC.`,
+    title,
+    description,
+    openGraph: { title, description, type: "profile" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

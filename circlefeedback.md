@@ -49,6 +49,8 @@ impossible with traditional L1 gas. We picked the Circle stack because:
   deposit/withdraw flow never lost a cent during 65h of batcher downtime.
 - **Arcscan address pages double as a creator-discovery proof-of-work signal.** When we built `/c/[slug]` (public creator profile à la Patreon), the most compelling "this is real" signal we could surface is just a deep link to `testnet.arcscan.app/address/<creator-EOA>`. Visitors click through, see real onchain history, and trust the platform without any extra UI plumbing on our side. Free credibility from Circle's existing infrastructure.
 - **Per-content `payment.count({settledOnchain: true})` aggregates** turn out to be the killer signal for a leaderboard. Ranking creators by lifetime USDC alone would also work, but the "N onchain" badge next to each creator on `/leaderboard` is what turns the page from a vanity scoreboard into "these are real Arc Testnet settlements". Got this almost for free thanks to how the SDK exposes settlement state on each Payment row.
+- **`POST /api/balance/top-up-gateway-pool` end-to-end loop on a single button click.** Once Phase 1 (per-user EOAs) was in place, wiring the consumer-side "Fund pool" button on `/balance` was a 60-line endpoint: read user's internal balance, decrement, call `platform.depositFor(amount, user.ownedEoaAddress)`, refund-on-error. Worked first try after the txpool issue cleared. The same primitive that solved custodial onboarding (depositFor) doubles as the user's onchain "I am taking custody of this USDC" action — without us having to teach users about gas, contract approvals, or chains.
+- **Returning fields: `{ depositTxHash, approvalTxHash, formattedAmount, depositor }` from `depositFor`** is the right shape for surfacing transparency. We piped both hashes straight into `Payment.referenceId` + the `arcscan ↗` link in the user's recent-transactions list — zero post-processing.
 
 ---
 
@@ -159,10 +161,28 @@ We had to search Circle Discord + GitHub + blog for 4 hours to understand:
 A single docs page explaining the batch lifecycle with typical timings would save every
 hackathon team days of confusion.
 
+### 5.7 First-class "depositFor" guidance for custodial onboarding
+The `depositFor(amount, depositor)` primitive is genuinely the linchpin of any custodial
+prototype that wants per-user onchain proof — but it shows up in the SDK README as one
+line under "buyer client methods" with no narrative about *why* it matters. We'd recommend
+a "Custodial onboarding pattern" section in the docs that walks through:
+
+  1. Provision a per-user EOA server-side (with caveats about key management)
+  2. Platform funds each user's Gateway pool via `depositFor(amt, userEoa)`
+  3. Each user's `GatewayClient` signs ticks from their own pool
+  4. arcscan now shows real per-user onchain activity, not just a single platform key
+
+We figured this pattern out by reading SDK type defs. A docs walkthrough (with the same
+arcscan-verifiability claim spelled out as a benefit) would make this an obvious choice
+for anyone building consumer-facing apps on Gateway.
+
 ---
 
 ## 6. Changelog of this file
 
+- **2026-04-25** — §3 added `top-up Gateway pool from balance` end-to-end success;
+  `depositFor` return shape success. §4.6a Arc RPC `txpool is full` from Phase 1
+  fund-user-eoa. §5.7 "depositFor for custodial onboarding" docs recommendation.
 - **2026-04-24** — §3 added `depositFor` success + `BatchEvmSigner` minimal-interface success after implementing Phase 1 per-user EOA flow
 - **2026-04-23** — initial seed: §4.1 Gateway batcher outage, §4.2 missing tx-hash in v3
   SDK, §4.3 Next.js caching, §4.5 mainnet-default URL, §5.1 status-page split proposal.
