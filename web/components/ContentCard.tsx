@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Youtube, FileText, ExternalLink, Lock, Play, TrendingUp, BookOpen } from "lucide-react";
+import { Youtube, FileText, ExternalLink, Lock, Play, TrendingUp, BookOpen, ArrowUpRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Avatar } from "@/components/ui/Avatar";
@@ -55,21 +55,45 @@ export function ContentCard({
 }) {
   const earned = item.lifetimeEarnedUsdc != null ? parseFloat(item.lifetimeEarnedUsdc) : null;
   const trending = item.trending7dUsdc != null ? parseFloat(item.trending7dUsdc) : 0;
-  const slug = item.creator?.slug;
   // Internal articles can be opened by anyone (the article page itself paywalls
   // beyond the first paragraph). External URLs stay locked behind auth so visitors
   // can't bypass the meter by going to YouTube directly.
   const canTuneIn = isInternalArticle(item) ? true : isAuthed && !!item.rawUrl;
+  const target = tuneInHrefFor(item);
+  const wholeCardLink: { href: string; external: boolean } | null = canTuneIn
+    ? target
+    : { href: "/auth/signup", external: false };
 
   return (
-    <Card className="group flex flex-col overflow-hidden bg-creator-card transition-all hover:border-accent/40">
+    <Card className="group relative flex flex-col overflow-hidden bg-creator-card transition-all hover:border-accent/40 hover:shadow-[0_0_0_1px_rgba(124,255,124,0.15)]">
+      {/* Whole-card click target — sits beneath badges/links so they stay interactive */}
+      {wholeCardLink && (
+        wholeCardLink.external ? (
+          <a
+            href={wholeCardLink.href}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={item.title ?? "Open content"}
+            className="absolute inset-0 z-10"
+          />
+        ) : (
+          <Link
+            href={wholeCardLink.href}
+            aria-label={item.title ?? "Open content"}
+            className="absolute inset-0 z-10"
+          />
+        )
+      )}
+
       {/* Preview */}
       <PreviewSurface item={item} canTuneIn={canTuneIn} />
 
       {/* Body */}
       <CardContent className="flex flex-1 flex-col gap-3 p-4">
         {showCreator && item.creator && (
-          <CreatorRow creator={item.creator} />
+          <div className="relative z-20">
+            <CreatorRow creator={item.creator} />
+          </div>
         )}
 
         <div className="space-y-1.5">
@@ -78,13 +102,11 @@ export function ContentCard({
           </div>
           {item.description ? (
             <p className="line-clamp-3 text-xs leading-relaxed text-muted">{item.description}</p>
-          ) : (
-            <p className="text-xs italic text-muted/60">No description.</p>
-          )}
+          ) : null}
         </div>
 
-        <div className="mt-auto flex items-center gap-2">
-          <CTA item={item} canTuneIn={canTuneIn} />
+        <div className="mt-auto flex items-center justify-between gap-2">
+          <InlineMeta item={item} canTuneIn={canTuneIn} />
           {trending > 0 && (
             <Badge variant="warn">
               <TrendingUp size={10} /> ${trending.toFixed(4)}/7d
@@ -139,48 +161,34 @@ function PreviewSurface({ item, canTuneIn }: { item: ContentCardItem; canTuneIn:
           )}
           style={{ background: gradient }}
         >
-          {item.kind === "mtrly" && item.title ? (
-            <div className="px-6 text-center">
-              <div className="mb-2 flex justify-center">
-                <KindIcon size={20} className="text-white/70" />
-              </div>
-              <div className="line-clamp-3 text-sm font-semibold leading-tight text-white/95">
-                {item.title}
-              </div>
-            </div>
-          ) : (
-            <KindIcon size={42} className="text-white/60" />
-          )}
+          <KindIcon size={48} className="text-white/55" strokeWidth={1.4} />
         </div>
       )}
 
       {/* Top-left kind badge */}
-      <div className="absolute left-2 top-2">
+      <div className="absolute left-2 top-2 z-20">
         <Badge variant="kind">
           <KindIcon size={10} />
           {item.kind}
         </Badge>
       </div>
 
-      {/* Center overlay */}
-      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-t from-bg/70 via-bg/20 to-transparent">
+      {/* Hover affordance — the whole card is the link, this is just visual feedback. */}
+      <div className="pointer-events-none absolute inset-0 flex items-end justify-end bg-gradient-to-t from-bg/60 via-transparent to-transparent p-3">
         {canTuneIn ? (
-          <div className="flex flex-col items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            <div className="rounded-full bg-accent p-3 text-bg shadow-[0_0_24px_rgba(124,255,124,0.5)]">
-              {item.kind === "mtrly" ? (
-                <BookOpen size={18} />
-              ) : (
-                <Play size={18} fill="currentColor" />
-              )}
-            </div>
-            <span className="font-mono text-[10px] uppercase text-fg">
-              {item.kind === "mtrly" ? "Read" : "Tune in"}
-            </span>
+          <div className="translate-y-1 rounded-full bg-accent/95 p-2.5 text-bg opacity-0 shadow-[0_0_24px_rgba(124,255,124,0.55)] transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+            {item.kind === "mtrly" ? (
+              <BookOpen size={16} />
+            ) : item.kind === "youtube" ? (
+              <Play size={16} fill="currentColor" />
+            ) : (
+              <ArrowUpRight size={16} />
+            )}
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-1.5 rounded-full border border-border/80 bg-bg/80 px-4 py-2 text-fg backdrop-blur-md">
-            <Lock size={14} />
-            <span className="font-mono text-[10px] uppercase tracking-wide">Sign up to watch</span>
+          <div className="flex items-center gap-1.5 rounded-full border border-border/70 bg-bg/85 px-2.5 py-1 text-fg backdrop-blur-md">
+            <Lock size={11} />
+            <span className="font-mono text-[10px] uppercase tracking-wide">Sign up</span>
           </div>
         )}
       </div>
@@ -204,7 +212,7 @@ function CreatorRow({ creator }: { creator: NonNullable<ContentCardItem["creator
     </div>
   );
   return slug ? (
-    <Link href={`/c/${slug}`} className="-mx-1 rounded-md px-1 py-0.5 hover:bg-bg/50">
+    <Link href={`/c/${slug}`} className="-mx-1 inline-flex rounded-md px-1 py-0.5 hover:bg-bg/50">
       {inner}
     </Link>
   ) : (
@@ -212,43 +220,25 @@ function CreatorRow({ creator }: { creator: NonNullable<ContentCardItem["creator
   );
 }
 
-function CTA({ item, canTuneIn }: { item: ContentCardItem; canTuneIn: boolean }) {
-  const target = tuneInHrefFor(item);
-  if (canTuneIn && target) {
-    const isInternal = !target.external;
-    const label = item.kind === "mtrly" ? "Read" : "Tune in";
-    const Icon = item.kind === "mtrly" ? BookOpen : Play;
-    if (isInternal) {
-      return (
-        <Link
-          href={target.href}
-          className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 font-mono text-[11px] uppercase text-accent hover:bg-accent/20"
-        >
-          <Icon size={11} fill={item.kind === "mtrly" ? undefined : "currentColor"} />
-          {label}
-        </Link>
-      );
-    }
+function InlineMeta({ item, canTuneIn }: { item: ContentCardItem; canTuneIn: boolean }) {
+  if (!canTuneIn) {
     return (
-      <a
-        href={target.href}
-        target="_blank"
-        rel="noreferrer"
-        className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-accent/40 bg-accent/10 px-3 py-1.5 font-mono text-[11px] uppercase text-accent hover:bg-accent/20"
-      >
-        <Icon size={11} fill="currentColor" />
-        {label}
-        <ExternalLink size={10} />
-      </a>
+      <span className="flex items-center gap-1 font-mono text-[10px] uppercase text-muted">
+        <Lock size={10} /> sign up to access
+      </span>
     );
   }
+  const label = item.kind === "mtrly"
+    ? "$0.005 / paragraph"
+    : item.kind === "youtube"
+      ? "$0.005 / second"
+      : "metered read";
+  const Icon = item.kind === "mtrly" ? BookOpen : item.kind === "youtube" ? Play : ExternalLink;
   return (
-    <Link
-      href="/auth/signup"
-      className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-border bg-surface px-3 py-1.5 font-mono text-[11px] uppercase hover:border-fg"
-    >
-      <Lock size={11} /> Sign up to watch
-    </Link>
+    <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase text-accent">
+      <Icon size={10} fill={item.kind === "youtube" ? "currentColor" : undefined} />
+      {label}
+    </span>
   );
 }
 

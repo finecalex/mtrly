@@ -1,17 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { Lock, Sparkles, ShieldCheck, ExternalLink, BookOpen, ArrowRight } from "lucide-react";
+import { Sparkles, ShieldCheck, ExternalLink, BookOpen, ArrowRight, MousePointerClick } from "lucide-react";
 import { db } from "@/lib/db";
 import { currentUserId } from "@/lib/auth";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { splitParagraphs, renderInline, readTimeMinutes, firstParagraphPreview } from "@/lib/articleBody";
 import { hashGradient } from "@/lib/gradients";
+import { MeteredArticle } from "@/components/MeteredArticle";
 
 export const dynamic = "force-dynamic";
 
-async function loadArticle(id: number) {
+async function loadArticle(id: number, viewerId: number | null) {
   if (!Number.isFinite(id) || id <= 0) return null;
   const article = await db.contentUrl.findUnique({
     where: { id },
@@ -36,11 +37,19 @@ async function loadArticle(id: number) {
     take: 3,
     select: { id: true, title: true, description: true, createdAt: true, bodyMarkdown: true },
   });
-  return { article, stats: { ...stats, onchain }, moreByAuthor };
+  let initialPaidCount = 0;
+  if (viewerId && viewerId !== article.creator.id) {
+    const consumption = await db.consumption.findUnique({
+      where: { viewerId_contentId: { viewerId, contentId: article.id } },
+      select: { unitsConsumed: true },
+    });
+    initialPaidCount = consumption?.unitsConsumed ?? 0;
+  }
+  return { article, stats: { ...stats, onchain }, moreByAuthor, initialPaidCount };
 }
 
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const data = await loadArticle(parseInt(params.id, 10));
+  const data = await loadArticle(parseInt(params.id, 10), null);
   if (!data) return { title: "Article not found · Mtrly" };
   const title = data.article.title ?? "Article";
   const description =
@@ -56,16 +65,17 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
 export default async function ArticlePage({ params }: { params: { id: string } }) {
   const id = parseInt(params.id, 10);
-  const data = await loadArticle(id);
+  const uid = await currentUserId();
+  const data = await loadArticle(id, uid);
   if (!data) notFound();
 
-  const { article, stats, moreByAuthor } = data;
+  const { article, stats, moreByAuthor, initialPaidCount } = data;
   const creator = article.creator;
   const slug = creator.slug;
-  const uid = await currentUserId();
   const isAuthed = uid != null;
   const isOwner = uid === creator.id;
-  const paragraphs = splitParagraphs(article.bodyMarkdown ?? "");
+  const rawParagraphs = splitParagraphs(article.bodyMarkdown ?? "");
+  const paragraphs = rawParagraphs.map((p, i) => ({ idx: i, html: renderInline(p) }));
   const totalCost = paragraphs.length * 0.005;
   const readMin = readTimeMinutes(article.bodyMarkdown ?? "");
   const settleAddr = creator.ownedEoaAddress ?? creator.circleWalletAddr;
@@ -120,13 +130,13 @@ export default async function ArticlePage({ params }: { params: { id: string } }
       {!isAuthed && (
         <section className="mt-8 rounded-xl border border-accent/30 bg-accent/5 p-5">
           <div className="flex items-start gap-3">
-            <Lock size={18} className="mt-0.5 text-accent" />
+            <MousePointerClick size={18} className="mt-0.5 text-accent" />
             <div className="flex-1">
               <h3 className="text-sm font-semibold">First paragraph is on the house.</h3>
               <p className="mt-1 text-sm text-muted">
-                Mtrly meters reading paragraph by paragraph, the moment you scroll a paragraph
-                into view, it unlocks and $0.005 flows from your balance to the creator. Sign up
-                to keep reading.
+                Mtrly meters reading paragraph by paragraph. Tap any blurred paragraph to reveal
+                it &mdash; $0.005 flows from your balance to the creator on the spot. No
+                subscriptions, no all-or-nothing paywall. Sign up to keep going.
               </p>
               <div className="mt-3 flex gap-2">
                 <Link
@@ -147,44 +157,22 @@ export default async function ArticlePage({ params }: { params: { id: string } }
         </section>
       )}
 
-      <article className="mt-10 space-y-6 text-base leading-relaxed">
-        {paragraphs.map((p, i) => {
-          const html = renderInline(p);
-          const free = i === 0;
-          const lockedForGuest = !isAuthed && !free;
-          return (
-            <p
-              key={i}
-              data-mtrly-paragraph={i}
-              className={lockedForGuest ? "select-none blur-sm saturate-50" : undefined}
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          );
-        })}
-      </article>
-
-      {!isAuthed && paragraphs.length > 1 && (
-        <div className="mt-12 rounded-xl border border-accent/30 bg-accent/5 p-6 text-center">
-          <h3 className="text-lg font-semibold">{paragraphs.length - 1} more paragraphs locked</h3>
-          <p className="mt-1 text-sm text-muted">
-            Sign up to unlock, pay only for what you actually read.
-          </p>
-          <Link
-            href={`/auth/signup?next=/a/${article.id}`}
-            className="mt-4 inline-flex rounded-lg bg-accent px-5 py-2 text-sm font-medium text-bg hover:opacity-90"
-          >
-            Sign up · ${totalCost.toFixed(3)} max to read it all
-          </Link>
-        </div>
-      )}
+      <MeteredArticle
+        paragraphs={paragraphs}
+        contentId={article.id}
+        articleId={article.id}
+        isAuthed={isAuthed}
+        isOwner={isOwner}
+        initialPaidCount={initialPaidCount}
+      />
 
       {isAuthed && !isOwner && (
         <section className="mt-12 rounded-xl border border-border bg-surface/50 p-5 text-sm text-muted">
           <p>
-            <Sparkles size={14} className="mr-1 inline" />
-            Install the Mtrly extension to meter your reading. Each paragraph debits $0.005 the
-            moment it scrolls into view. Refresh-safe, you don&apos;t pay twice for paragraphs
-            you already paid for.
+            <Sparkles size={14} className="mr-1 inline text-accent" />
+            Tap-to-reveal is the new default on Mtrly articles &mdash; each tap is a real onchain
+            nanopayment to the creator (batched and settled on Arc Testnet). Refresh-safe: the
+            paragraphs you&apos;ve already paid for stay open the next time you come back.
           </p>
         </section>
       )}

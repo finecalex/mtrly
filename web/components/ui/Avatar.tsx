@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { cn } from "@/lib/cn";
 
@@ -26,6 +28,12 @@ function initials(name?: string | null, email?: string | null): string {
   return (a + b).toUpperCase().slice(0, 2);
 }
 
+function dicebearUrl(seed: string): string {
+  // Deterministic geometric avatar — no auth needed, served as inline SVG.
+  const s = encodeURIComponent(seed);
+  return `https://api.dicebear.com/9.x/shapes/svg?seed=${s}&backgroundType=gradientLinear&backgroundRotation=0,360`;
+}
+
 export interface AvatarProps extends React.HTMLAttributes<HTMLDivElement> {
   src?: string | null;
   name?: string | null;
@@ -38,6 +46,9 @@ export function Avatar({ src, name, email, seed, size = 40, className, ...props 
   const key = (seed ?? name ?? email ?? "?").toLowerCase();
   const [c1, c2] = PALETTE[hashToIdx(key)];
   const ini = initials(name, email);
+  const generated = !src ? dicebearUrl(key) : null;
+  const [imgFailed, setImgFailed] = React.useState(false);
+  const showImg = (src || generated) && !imgFailed;
 
   return (
     <div
@@ -49,9 +60,15 @@ export function Avatar({ src, name, email, seed, size = 40, className, ...props 
       style={{ width: size, height: size, background: `linear-gradient(135deg, ${c1}, ${c2})` }}
       {...props}
     >
-      {src ? (
+      {showImg ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={name ?? email ?? "avatar"} className="h-full w-full object-cover" />
+        <img
+          src={(src ?? generated) as string}
+          alt={name ?? email ?? "avatar"}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          onError={() => setImgFailed(true)}
+        />
       ) : (
         <span
           className="font-semibold text-white/95"

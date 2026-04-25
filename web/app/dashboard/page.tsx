@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Pencil, ExternalLink, BookOpen, Youtube, FileText, Wallet, Share2, Eye, Trash2 } from "lucide-react";
+import { Pencil, ExternalLink, BookOpen, Youtube, FileText, Wallet, Share2, Eye, Trash2, Plus, BarChart3 } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Card as UICard, CardContent, CardHeader } from "@/components/ui/Card";
@@ -230,7 +230,17 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <a href="#publish">
+            <Button size="sm">
+              <Plus size={14} /> New content
+            </Button>
+          </a>
+          <Link href="/stats">
+            <Button variant="secondary" size="sm">
+              <BarChart3 size={14} /> Network stats
+            </Button>
+          </Link>
           {me.slug && (
             <Link href={`/c/${me.slug}`}>
               <Button variant="secondary" size="sm">
@@ -362,7 +372,7 @@ export default function DashboardPage() {
         </section>
       )}
 
-      <section className="mt-10">
+      <section id="publish" className="mt-10 scroll-mt-6">
         <h2 className="font-mono text-xs uppercase text-muted">Publish new content</h2>
         <div className="mt-3 flex gap-1 rounded-lg border border-border bg-surface p-1">
           <button
