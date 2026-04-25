@@ -12,6 +12,12 @@ export function getGatewayClient(): GatewayClient {
   return client;
 }
 
+// Call after a failed withdraw to force the next call to create a fresh client
+// with a clean nonce — the most common cause of cascading withdrawal failures.
+export function resetGatewayClient(): void {
+  client = null;
+}
+
 export function gatewayConfigured(): boolean {
   return typeof KEY === "string" && KEY.startsWith("0x") && KEY.length === 66;
 }

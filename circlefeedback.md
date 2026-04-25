@@ -110,6 +110,25 @@ mainnet (which then 404s because testnet service IDs aren't there). The stack tr
 no hint that the chain mismatch is the root cause. We got bitten briefly; docs should
 call this out in bold in the migration notes.
 
+### 4.7 `GatewayClient` singleton enters a bad nonce state after a failed `withdraw()` call (2026-04-25)
+When `GatewayClient.withdraw()` throws (network error, Arc transient fault, etc.), the
+client's internal nonce tracker is left incremented even though no tx was confirmed. Every
+subsequent call from the same singleton fails with a nonce-mismatch error, creating an
+infinite retry storm when auto-cashout refunds the balance and the next tick immediately
+re-triggers the threshold check. We observed 50+ cascading failed `BalanceTransaction`
+rows in 5-second intervals for a single creator, all with error `auto-withdraw:failed-refunded`
+(reason not captured at the time). Root cause was confirmed by noting that a container
+restart (fresh singleton) immediately produced a successful withdrawal.
+
+**Workaround we shipped:** call `resetGatewayClient()` after any withdrawal failure and add
+a 60-second in-process cooldown per creator before retrying. This stops the storm and
+gives the nonce time to sync.
+
+**Recommendation:** `GatewayClient.withdraw()` should either (a) reset its own nonce
+cache on a failed tx so the next call re-fetches from chain, or (b) expose a `reset()`
+method that callers can invoke after a caught error. Without this, any app that wraps
+`withdraw()` in retry logic will cascade.
+
 ### 4.6a `eth_sendRawTransaction` returns "txpool is full" on Arc Testnet RPC during fund-user-eoa testing (2026-04-25)
 While building Phase 1 of our consumer flow (per-user EOA tick wallets), the platform's `GatewayClient.depositFor(amount, userEoa)` call kept failing with `Details: txpool is full` from `https://rpc.testnet.arc.network`. The approval tx (`approve(GatewayWallet, 50000)` for $0.05) couldn't be submitted at all — error returned at the RPC layer, not in the contract. Reproduced 3x in 90 seconds. Same platform EOA had been successfully sending x402 settlement txs minutes earlier. This isn't an SDK bug, but it does block onboarding flows that rely on `depositFor` — there is no way for an SDK consumer to detect "RPC node mempool saturated" vs. "I have a real bug" from the error message alone. Suggestion: surface mempool-fullness as a typed error the SDK can retry on (with backoff), or document the expected throughput / mempool depth of the public Arc Testnet RPC so devs know to use a private node for high-volume periods.
 

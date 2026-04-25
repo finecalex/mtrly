@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { db } from "./db";
-import { gatewayConfigured, getGatewayClient, arcExplorerTx } from "./gateway";
+import { gatewayConfigured, getGatewayClient, resetGatewayClient, arcExplorerTx } from "./gateway";
 
 // Per-creator auto-cashout. When a creator's Balance.autoWithdrawThresholdUsdc
 // is set and their balance crosses that threshold, we kick off a Gateway
@@ -20,8 +20,17 @@ import { gatewayConfigured, getGatewayClient, arcExplorerTx } from "./gateway";
 
 const MIN_WITHDRAW = new Prisma.Decimal("0.01");
 
+// In-process cooldown: after a failed withdrawal attempt, skip all retries for
+// 60 seconds. Prevents a single gateway error from triggering a rapid-fire storm
+// of retries on every subsequent tick (which fires every 5s).
+const failCooldown = new Map<number, number>();
+const COOLDOWN_MS = 60_000;
+
 export async function maybeAutoWithdrawForCreator(creatorId: number): Promise<void> {
   if (!gatewayConfigured()) return;
+
+  const lastFail = failCooldown.get(creatorId);
+  if (lastFail !== undefined && Date.now() - lastFail < COOLDOWN_MS) return;
 
   try {
     const creator = await db.user.findUnique({
@@ -80,8 +89,17 @@ export async function maybeAutoWithdrawForCreator(creatorId: number): Promise<vo
       mintTxHash = result.mintTxHash;
     } catch (e) {
       // Refund: credit the balance back, mark the pending row as failed so
-      // ops can see it without the creator losing funds.
+      // the creator can see in the dashboard exactly why their cashout
+      // didn't go through.
+      const rawMsg = e instanceof Error ? e.message : String(e);
+      // referenceId is varchar(280)-ish via Prisma default; truncate the
+      // error so we never blow the column limit.
+      const reason = rawMsg.replace(/\s+/g, " ").slice(0, 220);
       console.error(`[auto-withdraw] gateway withdraw failed for creator ${creatorId}:`, e);
+      // Engage cooldown + reset client before refunding so the next tick won't
+      // immediately retry with the same (possibly corrupted) nonce state.
+      failCooldown.set(creatorId, Date.now());
+      resetGatewayClient();
       try {
         await db.$transaction([
           db.balance.update({
@@ -90,7 +108,7 @@ export async function maybeAutoWithdrawForCreator(creatorId: number): Promise<vo
           }),
           db.balanceTransaction.update({
             where: { id: pendingTxId },
-            data: { referenceId: `auto-withdraw:failed-refunded` },
+            data: { referenceId: `auto-withdraw:failed:${reason}` },
           }),
         ]);
       } catch (refundErr) {
