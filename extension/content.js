@@ -248,6 +248,10 @@
       if (video) attachVideoListeners(video);
     } else if (matchRes.kind === "web") {
       await setupTextPaywall(matchRes);
+    } else if (matchRes.kind === "mtrly" || matchRes.pageManaged) {
+      // Mtrly's own article page handles metering itself via tap-to-reveal —
+      // we just keep the balance panel visible so the user has continuous
+      // wallet context while reading. No tick observer here.
     }
   }
 

@@ -9,14 +9,19 @@ type ParagraphState = "locked" | "paying" | "unlocked";
 
 const PRICE_PER_PARAGRAPH = 0.005;
 
-function lsKey(contentId: number) {
-  return `mtrly:paid-paragraphs:${contentId}`;
+// Storage key MUST include viewerId. Otherwise demo viewer A's unlocked set
+// leaks into demo viewer B on the same browser, and viewer B sees paragraphs
+// as already paid → click is a no-op → no /api/billing/tick fires → their
+// balance never moves and they think the meter is broken.
+function lsKey(viewerId: number | null, contentId: number) {
+  const uid = viewerId ?? "anon";
+  return `mtrly:paid-paragraphs:${uid}:${contentId}`;
 }
 
-function loadPaidFromLocalStorage(contentId: number): number[] {
+function loadPaidFromLocalStorage(viewerId: number | null, contentId: number): number[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(lsKey(contentId));
+    const raw = window.localStorage.getItem(lsKey(viewerId, contentId));
     if (!raw) return [];
     const arr = JSON.parse(raw);
     if (!Array.isArray(arr)) return [];
@@ -26,10 +31,10 @@ function loadPaidFromLocalStorage(contentId: number): number[] {
   }
 }
 
-function persistPaidToLocalStorage(contentId: number, idxs: Set<number>) {
+function persistPaidToLocalStorage(viewerId: number | null, contentId: number, idxs: Set<number>) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(lsKey(contentId), JSON.stringify(Array.from(idxs)));
+    window.localStorage.setItem(lsKey(viewerId, contentId), JSON.stringify(Array.from(idxs)));
   } catch {
     // quota exceeded or storage disabled — non-fatal
   }
@@ -39,6 +44,7 @@ export function MeteredArticle({
   paragraphs,
   contentId,
   articleId,
+  viewerId,
   isAuthed,
   isOwner,
   initialPaidCount,
@@ -46,6 +52,7 @@ export function MeteredArticle({
   paragraphs: { idx: number; html: string }[];
   contentId: number;
   articleId: number;
+  viewerId: number | null;
   isAuthed: boolean;
   isOwner: boolean;
   initialPaidCount: number;
@@ -66,7 +73,7 @@ export function MeteredArticle({
     if (isOwner) return new Set(paragraphs.map((p) => p.idx));
     const s = new Set<number>([0]);
     if (!isAuthed) return s;
-    const fromLs = loadPaidFromLocalStorage(contentId);
+    const fromLs = loadPaidFromLocalStorage(viewerId, contentId);
     for (const i of fromLs) if (i < total) s.add(i);
     // Sequential fallback only if the localStorage record is shorter than the
     // server's count (fresh device, etc.) — top up so the user doesn't see
@@ -75,7 +82,7 @@ export function MeteredArticle({
       for (let i = 1; i <= initialPaidCount && i < total; i++) s.add(i);
     }
     return s;
-  }, [paragraphs, isOwner, isAuthed, initialPaidCount, total, contentId]);
+  }, [paragraphs, isOwner, isAuthed, initialPaidCount, total, contentId, viewerId]);
 
   const [states, setStates] = useState<Record<number, ParagraphState>>(() => {
     const init: Record<number, ParagraphState> = {};
@@ -184,13 +191,13 @@ export function MeteredArticle({
         Object.entries(states).forEach(([k, v]) => {
           if (v === "unlocked") nextSet.add(Number(k));
         });
-        persistPaidToLocalStorage(contentId, nextSet);
+        persistPaidToLocalStorage(viewerId, contentId, nextSet);
       } catch {
         setStates((s) => ({ ...s, [idx]: "locked" }));
         toast.push({ kind: "error", title: "Network glitch", description: "Try once more." });
       }
     },
-    [states, ensureSession, toast, triggerReveal, contentId],
+    [states, ensureSession, toast, triggerReveal, contentId, viewerId],
   );
 
   // Owner-mode preview: nothing to meter, but still mark all unlocked.

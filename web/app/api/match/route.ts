@@ -22,24 +22,22 @@ export async function GET(req: NextRequest) {
 
   if (!content) return NextResponse.json({ match: false });
 
-  // Mtrly's own articles (/a/[id]) are stored with their own URL but kind=mtrly,
-  // and the article page handles metering itself with click-to-reveal. The
-  // extension must stay completely out of the way on those URLs — otherwise
-  // its IntersectionObserver double-charges paragraphs the user already paid
-  // for via the page's own meter.
-  if (content.kind === "mtrly") {
-    return NextResponse.json({ match: false });
-  }
-
-  const price = kind === "youtube" ? PRICING.video.pricePerMinute : PRICING.text.pricePerParagraph;
+  // Use the kind from the DB row, not the URL shape. Our own /a/[id] articles
+  // are kind="mtrly" — the extension still wants to show its balance panel on
+  // them but must skip the scroll-based paywall setup, since the page handles
+  // tap-to-reveal metering itself. Returning kind="mtrly" lets extension
+  // content.js branch on it explicitly.
+  const effectiveKind: "youtube" | "web" | "mtrly" = content.kind;
+  const price = effectiveKind === "youtube" ? PRICING.video.pricePerMinute : PRICING.text.pricePerParagraph;
 
   return NextResponse.json({
     match: true,
     contentId: content.id,
-    kind,
+    kind: effectiveKind,
+    pageManaged: effectiveKind === "mtrly",
     normalizedUrl: normalized,
     price,
-    unit: kind === "youtube" ? "minute" : "paragraph",
+    unit: effectiveKind === "youtube" ? "minute" : "paragraph",
     creator: content.creator,
   });
 }

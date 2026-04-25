@@ -35,7 +35,9 @@ const creatorSchema = z.object({
   slug: z.string().min(3).max(32).optional(),
   bio: z.string().max(500).optional(),
   avatarUrl: z.string().url().optional(),
-  urls: z.array(z.string().url()).min(1).max(10),
+  // Allow empty so the seeder can stand up creator profiles first and the
+  // URLs get attached in a second pass once the curator has picked them.
+  urls: z.array(z.string().url()).max(10).default([]),
 });
 
 const schema = z.object({

@@ -161,6 +161,7 @@ export default async function ArticlePage({ params }: { params: { id: string } }
         paragraphs={paragraphs}
         contentId={article.id}
         articleId={article.id}
+        viewerId={uid}
         isAuthed={isAuthed}
         isOwner={isOwner}
         initialPaidCount={initialPaidCount}
