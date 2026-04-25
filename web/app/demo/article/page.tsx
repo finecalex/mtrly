@@ -18,8 +18,8 @@ export default function DemoArticle() {
           subscription that demands a long-term commitment before you&apos;ve read a
           single word. Neither option respects the fact that most of what people
           consume online is a single article, a single video, a single moment of
-          curiosity. Mtrly&apos;s bet is that nanopayments, billed per second of
-          attention, make a third path possible.
+          curiosity. Mtrly&apos;s bet is that nanopayments, billed per paragraph
+          read or per second of video, make a third path possible.
         </p>
         <p>
           Arc is a stablecoin-native rollup where USDC is the gas token. That
@@ -35,12 +35,12 @@ export default function DemoArticle() {
           The Mtrly extension watches the page you&apos;re on. If the URL is
           registered by a creator — a YouTube video, a blog post, a podcast
           transcript — the extension opens a session with the Mtrly backend and
-          starts a clock. Every five seconds for video, or every three-second
-          dwell on a paragraph for text, it calls the billing engine. The
-          engine atomically debits your balance, credits 80% to the creator,
-          and keeps 20% for the platform. No sign-up forms for each site. No
-          subscription lock-ins. Just seconds of attention, priced in
-          hundredths of a cent.
+          starts a clock. Every five seconds for video, or the moment a
+          paragraph scrolls into view for text, it calls the billing engine.
+          The engine atomically debits your balance, credits 80% to the
+          creator, and keeps 20% for the platform. No sign-up forms for each
+          site. No subscription lock-ins. Just attention priced in hundredths
+          of a cent.
         </p>
         <p>
           The critical UX question is what happens when the money runs out.
@@ -55,10 +55,11 @@ export default function DemoArticle() {
           There is an obvious question about trust. How do I know the extension
           isn&apos;t running the meter while I&apos;m making a coffee? The
           answer is video-element event listeners — the meter only ticks while
-          the video is actually playing, and for text only when the paragraph
-          is fifty-percent in-viewport for three consecutive seconds. The
-          extension is open-source; the content script is fifty lines. If
-          you don&apos;t trust it, you can read it.
+          the video is actually playing, and for text only the moment a paragraph
+          scrolls past the fifty-percent visibility threshold (with a tiny
+          200ms debounce so flicking past doesn&apos;t bill you). The extension
+          is open-source; the content script is fifty lines. If you don&apos;t
+          trust it, you can read it.
         </p>
         <p>
           The harder question is collusion: what stops a creator from

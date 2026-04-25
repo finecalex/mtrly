@@ -227,7 +227,9 @@
   }
 
   async function setupTextPaywall(match) {
-    const DWELL_MS = 3000;
+    // Tick fires the moment a locked paragraph becomes >=50% visible.
+    // Tiny debounce (200ms) only to swallow accidental fast-scroll past.
+    const DWELL_MS = 200;
     const FREE_PARAGRAPHS = 1;
 
     const consumptionRes = await sendMessage({

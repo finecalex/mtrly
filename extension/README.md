@@ -39,13 +39,13 @@ Chrome MV3 extension — pay-per-second content meter on Arc testnet.
 
 - The first paragraph is free.
 - Every subsequent paragraph is blurred with a `$0.005` badge.
-- Dwelling on a blurred paragraph (≥50% in viewport) for 3 consecutive seconds debits $0.005 and unblurs it.
+- The moment a blurred paragraph crosses 50% visibility (with a 200ms debounce to swallow accidental fast-scroll past), it debits $0.005 and unblurs.
 - Refreshing the page does not re-bill you for paragraphs you already paid for.
 
 ## Architecture
 
 - `background.js` — MV3 service worker; routes messages; all API calls use `credentials: "include"` to carry the session cookie; tracks `sessionId` per tab.
-- `content.js` — content script injected into every page; calls `/api/match`, attaches `play`/`pause` listeners to `<video>`, runs the 5-sec tick timer, or (for text) an `IntersectionObserver` + 3-sec dwell timer.
+- `content.js` — content script injected into every page; calls `/api/match`, attaches `play`/`pause` listeners to `<video>`, runs the 5-sec tick timer, or (for text) an `IntersectionObserver` that ticks immediately when a paragraph crosses 50% visibility (with a 200ms debounce to swallow accidental fast-scroll past).
 - `popup.html` + `popup.js` — toolbar popup with auth status, balance, log-in and top-up buttons.
 - `overlay.css` — styles for the side panel, the blocking overlay, and paragraph blur.
 

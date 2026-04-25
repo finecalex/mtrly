@@ -46,8 +46,9 @@ export default function HowItWorksPage() {
             registered the URL, the meter starts.
           </Step>
           <Step n={3} icon={<TrendingUp size={18} />} title="Watch / read anywhere">
-            $0.05/min for video, $0.005 per paragraph dwelled-on for ~3 seconds. Native Mtrly
-            articles work without an extension — just open <code className="font-mono text-xs text-fg">/a/&lt;id&gt;</code>.
+            $0.05/min for video, $0.005 per paragraph as soon as it scrolls into view. Native
+            Mtrly articles work without an extension — just open{" "}
+            <code className="font-mono text-xs text-fg">/a/&lt;id&gt;</code>.
           </Step>
         </Steps>
       </section>
@@ -112,7 +113,7 @@ export default function HowItWorksPage() {
         <PriceCard
           title="$0.005 / paragraph"
           sub="text"
-          body="3-second dwell, paragraph-level. The first paragraph is always free as a teaser. Refresh-safe — paragraphs you paid stay unlocked."
+          body="Paragraph-level. The moment a paragraph scrolls into view, it unlocks and debits $0.005. The first paragraph is always free as a teaser. Refresh-safe — paragraphs you paid stay unlocked."
         />
       </section>
 

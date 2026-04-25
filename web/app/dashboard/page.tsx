@@ -430,8 +430,8 @@ export default function DashboardPage() {
           <form onSubmit={addArticle} className="mt-4 flex flex-col gap-3">
             <p className="text-xs text-muted">
               Write directly on Mtrly. Each paragraph (separated by a blank line) is metered at
-              $0.005 per ~3-second dwell. The first paragraph is always free as a teaser; the rest
-              unlock as the reader pays.
+              $0.005 per paragraph the reader scrolls into view. The first paragraph is always
+              free as a teaser; the rest unlock the moment the reader reaches them.
             </p>
             <input
               type="text"

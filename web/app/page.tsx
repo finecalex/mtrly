@@ -41,7 +41,7 @@ export default function Home() {
 
       <div className="mt-24 grid grid-cols-1 gap-6 border-t border-border pt-12 md:grid-cols-3">
         <Stat label="Price / minute" value="$0.05" sub="video, per-second billed" />
-        <Stat label="Price / paragraph" value="$0.005" sub="text, 3-sec dwell" />
+        <Stat label="Price / paragraph" value="$0.005" sub="text, per paragraph viewed" />
         <Stat label="Gas paid by viewer" value="$0.00" sub="Circle Nanopayments" />
       </div>
 

@@ -6,7 +6,7 @@ export const PRICING = {
   },
   text: {
     pricePerParagraph: 0.005,
-    dwellSec: 3,
+    dwellMs: 200,
     freeParagraphs: 1,
   },
   split: {

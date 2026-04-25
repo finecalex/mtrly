@@ -124,9 +124,9 @@ export default async function ArticlePage({ params }: { params: { id: string } }
             <div className="flex-1">
               <h3 className="text-sm font-semibold">First paragraph is on the house.</h3>
               <p className="mt-1 text-sm text-muted">
-                Mtrly meters by the second of attention — every paragraph you dwell on for ~3
-                seconds debits $0.005 from your balance and pays the creator. Sign up to keep
-                reading.
+                Mtrly meters reading paragraph by paragraph — the moment you scroll a paragraph
+                into view, it unlocks and $0.005 flows from your balance to the creator. Sign up
+                to keep reading.
               </p>
               <div className="mt-3 flex gap-2">
                 <Link
@@ -182,8 +182,8 @@ export default async function ArticlePage({ params }: { params: { id: string } }
         <section className="mt-12 rounded-xl border border-border bg-surface/50 p-5 text-sm text-muted">
           <p>
             <Sparkles size={14} className="mr-1 inline" />
-            Install the Mtrly extension to meter your reading. Each paragraph debits $0.005 after
-            you dwell on it for ~3 seconds. Refresh-safe — you don&apos;t pay twice for paragraphs
+            Install the Mtrly extension to meter your reading. Each paragraph debits $0.005 the
+            moment it scrolls into view. Refresh-safe — you don&apos;t pay twice for paragraphs
             you already paid for.
           </p>
         </section>
