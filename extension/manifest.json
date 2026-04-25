@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Pay-per-second content on any site. Powered by Circle Nanopayments on Arc.",
   "permissions": ["tabs", "activeTab"],
-  "host_permissions": ["<all_urls>", "https://circlearc-59513674.slonix.dev/*"],
+  "host_permissions": ["<all_urls>", "https://circlearc-59513674.slonix.dev/*", "https://mtrly.xyz/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

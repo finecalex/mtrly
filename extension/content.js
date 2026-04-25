@@ -415,6 +415,14 @@
         hideBlockingOverlay();
         currentMatch = null;
         spent = 0;
+        // Reset page-managed poll so the new page gets a fresh initial-balance
+        // baseline. Without this, navigating between articles in the same tab
+        // leaves the stale timer running with the wrong pageManagedInitialBalance.
+        if (pageManagedTimer) {
+          clearInterval(pageManagedTimer);
+          pageManagedTimer = null;
+        }
+        pageManagedInitialBalance = null;
         bootstrap(lastUrl);
       });
     }

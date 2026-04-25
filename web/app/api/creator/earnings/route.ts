@@ -68,25 +68,39 @@ export async function GET() {
     take: 10,
     select: { id: true, amountUsdc: true, referenceId: true, createdAt: true },
   });
+  const platformExplorer = platformGatewayExplorerUrl();
   const autoWithdrawals = autoCashouts.map((r) => {
     const ref = r.referenceId ?? "";
     let status: "pending" | "onchain" | "failed" = "pending";
     let hash: string | null = null;
+    let failureReason: string | null = null;
     if (ref.startsWith("auto-withdraw:onchain:")) {
       status = "onchain";
       const h = ref.slice("auto-withdraw:onchain:".length);
       hash = h && h.startsWith("0x") ? h : null;
-    } else if (ref.startsWith("auto-withdraw:failed")) {
+    } else if (ref.startsWith("auto-withdraw:failed:")) {
       status = "failed";
+      failureReason = ref.slice("auto-withdraw:failed:".length) || "unknown";
+    } else if (ref === "auto-withdraw:failed-refunded" || ref.startsWith("auto-withdraw:failed-refunded")) {
+      // Older entries from before reasons were captured.
+      status = "failed";
+      failureReason = "unknown (older entry, no reason stored)";
     }
     return {
       id: r.id,
-      // amountUsdc is stored negative for withdraws — flip for the UI
       amountUsdc: new Prisma.Decimal(r.amountUsdc).neg().toString(),
       createdAt: r.createdAt,
       status,
       onchainTxHash: hash,
-      explorerUrl: hash ? `https://testnet.arcscan.app/tx/${hash}` : null,
+      failureReason,
+      // For onchain rows we link to the actual tx; for failed rows we still
+      // want a "view onchain" link so the creator can sanity-check the
+      // platform Gateway pool's recent activity. Pending rows get null.
+      explorerUrl: hash
+        ? `https://testnet.arcscan.app/tx/${hash}`
+        : status === "failed"
+          ? platformExplorer
+          : null,
     };
   });
 

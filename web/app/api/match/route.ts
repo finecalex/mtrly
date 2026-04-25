@@ -3,6 +3,26 @@ import { db } from "@/lib/db";
 import { normalizeUrl } from "@/lib/url";
 import { PRICING } from "@/lib/config";
 
+// All domain aliases that point at this app. When a URL arrives via any of
+// these we rewrite it to the canonical origin before the DB lookup so that
+// articles created on one domain are matched when accessed via another.
+const CANONICAL_ORIGIN = (process.env.NEXT_PUBLIC_APP_URL ?? "https://circlearc-59513674.slonix.dev").replace(/\/$/, "");
+const OWN_ORIGIN_ALIASES = new Set([
+  CANONICAL_ORIGIN,
+  "https://mtrly.xyz",
+  "https://www.mtrly.xyz",
+]);
+
+function canonicalize(url: string): string {
+  try {
+    const u = new URL(url);
+    if (OWN_ORIGIN_ALIASES.has(u.origin)) {
+      return `${CANONICAL_ORIGIN}${u.pathname}${u.search}`;
+    }
+  } catch { /* not a valid URL — leave as-is */ }
+  return url;
+}
+
 export async function GET(req: NextRequest) {
   const raw = req.nextUrl.searchParams.get("url");
   if (!raw) return NextResponse.json({ match: false, error: "url required" }, { status: 400 });
@@ -15,8 +35,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ match: false });
   }
 
+  // Rewrite own-domain aliases to canonical so mtrly.xyz/a/10 finds the same
+  // DB row as circlearc-59513674.slonix.dev/a/10.
+  const lookupUrl = canonicalize(normalized);
+
   const content = await db.contentUrl.findUnique({
-    where: { normalizedUrl: normalized },
+    where: { normalizedUrl: lookupUrl },
     include: { creator: { select: { id: true, displayName: true, walletAddress: true } } },
   });
 

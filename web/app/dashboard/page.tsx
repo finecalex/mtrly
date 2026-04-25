@@ -499,11 +499,17 @@ export default function DashboardPage() {
               </button>
             </div>
             {publishedArticle && (
-              <div className="rounded border border-accent/30 bg-accent/5 p-3 text-sm">
-                Published{" "}
-                <a href={publishedArticle} className="text-accent underline" target="_blank" rel="noreferrer">
-                  {publishedArticle}
-                </a>
+              <div className="rounded border border-accent/30 bg-accent/5 p-3 text-sm space-y-1">
+                <div>
+                  Published{" "}
+                  <a href={publishedArticle} className="text-accent underline" target="_blank" rel="noreferrer">
+                    {publishedArticle}
+                  </a>
+                </div>
+                <div className="flex items-center gap-1.5 font-mono text-[10px] text-green-400">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
+                  metered · $0.005/paragraph · extension will charge readers automatically
+                </div>
               </div>
             )}
           </form>
@@ -808,6 +814,12 @@ function ContentRow({
               <span>
                 <span className="text-accent tabular-nums">${earned.toFixed(4)}</span> earned
               </span>
+              {isMtrly && (
+                <span className="flex items-center gap-1 text-green-400/80">
+                  <span className="inline-block h-1 w-1 rounded-full bg-green-400/80" />
+                  metered
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-1">
               <button

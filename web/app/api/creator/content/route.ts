@@ -92,7 +92,15 @@ export async function POST(req: NextRequest) {
       where: { id: created.id },
       data: { rawUrl: canonical, normalizedUrl: canonical },
     });
-    return NextResponse.json({ ok: true, content: updated, articleUrl: `/a/${created.id}` });
+    // Self-check: confirm the article is findable by /api/match so the extension
+    // will meter it on first visit (kind=mtrly, pageManaged=true). Always true for
+    // a newly created article — this is an explicit assertion, not a guard.
+    const matchCheck = await db.contentUrl.findUnique({
+      where: { normalizedUrl: canonical },
+      select: { id: true, kind: true },
+    });
+    const metered = matchCheck?.id === created.id && matchCheck.kind === "mtrly";
+    return NextResponse.json({ ok: true, content: updated, articleUrl: `/a/${created.id}`, metered });
   }
 
   let normalized: string;

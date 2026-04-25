@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Sparkles, FileText, Play } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -228,84 +228,128 @@ function EngagementChart({
   const x = (idx: number) => padL + (idx / n) * innerW;
   const y = (pct: number) => padT + innerH - (pct / 100) * innerH;
 
-  // Build a smooth-ish path via cubic Bézier between adjacent points so the
-  // curve looks the way the mockup does without a charting dependency.
   const path = points.length > 0 ? buildSmoothPath(points.map((p) => [x(p.idx), y(p.pct)])) : "";
 
   const dropoffX = data.dropoffParagraph != null ? x(data.dropoffParagraph) : null;
   const dropoffY = data.dropoffParagraph != null ? y(data.dropoffPct) : null;
 
+  // Hover state — tracks which paragraph point the cursor is nearest to
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  const hoveredPoint = hoveredIdx != null ? points.find((p) => p.idx === hoveredIdx) ?? null : null;
+
+  function handleMouseMove(e: React.MouseEvent<SVGSVGElement>) {
+    const svg = svgRef.current;
+    if (!svg || points.length === 0) return;
+    const rect = svg.getBoundingClientRect();
+    const svgX = ((e.clientX - rect.left) / rect.width) * W;
+    // Find the nearest point by x distance
+    let nearest = points[0];
+    let minDist = Math.abs(x(points[0].idx) - svgX);
+    for (const p of points) {
+      const d = Math.abs(x(p.idx) - svgX);
+      if (d < minDist) { minDist = d; nearest = p; }
+    }
+    setHoveredIdx(nearest.idx);
+  }
+
   return (
     <div className="mt-4 overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Engagement over content chart">
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full cursor-crosshair"
+        role="img"
+        aria-label="Engagement over content chart"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHoveredIdx(null)}
+      >
         {/* Y gridlines + labels */}
         {[0, 25, 50, 75, 100].map((v) => (
           <g key={v}>
-            <line
-              x1={padL}
-              x2={W - padR}
-              y1={y(v)}
-              y2={y(v)}
-              stroke="rgba(255,255,255,0.06)"
-              strokeWidth={1}
-            />
+            <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="rgba(255,255,255,0.06)" strokeWidth={1} />
             <text x={padL - 8} y={y(v) + 3} textAnchor="end" className="fill-muted" fontSize={10} fontFamily="ui-monospace, monospace">
               {v}%
             </text>
           </g>
         ))}
 
-        {/* Engagement line + area */}
+        {/* Engagement area + line */}
         {points.length > 1 && (
           <>
             <path
               d={`${path} L ${x(points[points.length - 1].idx)} ${y(0)} L ${x(0)} ${y(0)} Z`}
-              fill="rgba(124,255,124,0.08)"
+              fill="rgba(124,255,124,0.07)"
             />
             <path d={path} stroke="#7cff7c" strokeWidth={2.4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
           </>
         )}
 
+        {/* Data point dots — always visible, subtle */}
+        {points.map((p) => (
+          <circle
+            key={p.idx}
+            cx={x(p.idx)}
+            cy={y(p.pct)}
+            r={hoveredIdx === p.idx ? 5.5 : 2.5}
+            fill={hoveredIdx === p.idx ? "#7cff7c" : "#0a0a0a"}
+            stroke="#7cff7c"
+            strokeWidth={hoveredIdx === p.idx ? 2 : 1.5}
+            style={{ transition: "r 0.12s, fill 0.12s" }}
+          />
+        ))}
+
+        {/* Hover: vertical cursor line + tooltip */}
+        {hoveredPoint != null && (() => {
+          const hx = x(hoveredPoint.idx);
+          const hy = y(hoveredPoint.pct);
+          const tipW = 114;
+          const tipX = Math.min(hx + 12, W - padR - tipW);
+          const tipY = Math.max(padT + 4, hy - 30);
+          return (
+            <g>
+              <line x1={hx} x2={hx} y1={padT} y2={H - padB} stroke="rgba(124,255,124,0.3)" strokeWidth={1} strokeDasharray="3 3" />
+              <rect x={tipX} y={tipY} width={tipW} height={38} rx={6} fill="#111" stroke="rgba(124,255,124,0.25)" strokeWidth={1} />
+              <text x={tipX + 10} y={tipY + 15} fontSize={11} fontFamily="ui-monospace, monospace" fill="#7cff7c">
+                {hoveredPoint.pct}%
+              </text>
+              <text x={tipX + 10} y={tipY + 28} fontSize={9} fontFamily="ui-monospace, monospace" fill="rgba(255,255,255,0.45)">
+                paragraph {hoveredPoint.idx} · {hoveredPoint.viewers}v
+              </text>
+            </g>
+          );
+        })()}
+
         {/* Dropoff marker */}
-        {dropoffX != null && dropoffY != null && (
+        {dropoffX != null && dropoffY != null && hoveredIdx == null && (
           <g>
-            <line
-              x1={dropoffX}
-              x2={dropoffX}
-              y1={padT}
-              y2={H - padB}
-              stroke="rgba(248,113,113,0.7)"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
-            />
+            <line x1={dropoffX} x2={dropoffX} y1={padT} y2={H - padB} stroke="rgba(248,113,113,0.7)" strokeWidth={1.5} strokeDasharray="4 4" />
             <circle cx={dropoffX} cy={dropoffY} r={5} fill="#0a0a0a" stroke="#f87171" strokeWidth={1.5} />
             <g transform={`translate(${Math.min(dropoffX + 14, W - padR - 110)}, ${Math.max(padT + 12, dropoffY - 24)})`}>
               <rect width={108} height={36} rx={6} fill="#0a0a0a" stroke="rgba(255,255,255,0.12)" />
-              <text x={10} y={16} className="fill-accent" fontSize={11} fontFamily="ui-monospace, monospace">
-                {data.dropoffPct}%
-              </text>
-              <text x={10} y={29} className="fill-muted" fontSize={9} fontFamily="ui-monospace, monospace">
-                of paragraph {data.dropoffParagraph}
-              </text>
+              <text x={10} y={16} className="fill-accent" fontSize={11} fontFamily="ui-monospace, monospace">{data.dropoffPct}%</text>
+              <text x={10} y={29} className="fill-muted" fontSize={9} fontFamily="ui-monospace, monospace">of paragraph {data.dropoffParagraph}</text>
             </g>
           </g>
         )}
 
         {/* X labels */}
         {axisTicks(points.length).map((t) => (
-          <text
-            key={t.idx}
-            x={x(t.idx)}
-            y={H - 8}
-            textAnchor="middle"
-            className="fill-muted"
-            fontSize={10}
-            fontFamily="ui-monospace, monospace"
-          >
+          <text key={t.idx} x={x(t.idx)} y={H - 8} textAnchor="middle" className="fill-muted" fontSize={10} fontFamily="ui-monospace, monospace">
             {t.label}
           </text>
         ))}
+
+        {/* Invisible hit-area overlay to ensure mouse events fire everywhere */}
+        <rect x={padL} y={padT} width={innerW} height={innerH} fill="transparent" />
       </svg>
+
+      {/* Paragraph label below chart */}
+      <div className="mt-1 h-4 text-center font-mono text-[10px] text-muted">
+        {hoveredPoint != null
+          ? `paragraph ${hoveredPoint.idx} — ${hoveredPoint.viewers} viewer${hoveredPoint.viewers !== 1 ? "s" : ""} reached`
+          : "hover to explore paragraphs"}
+      </div>
     </div>
   );
 }
