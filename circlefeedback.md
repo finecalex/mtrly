@@ -129,6 +129,23 @@ cache on a failed tx so the next call re-fetches from chain, or (b) expose a `re
 method that callers can invoke after a caught error. Without this, any app that wraps
 `withdraw()` in retry logic will cascade.
 
+### 4.8 `gatewayMint(bytes attestationPayload, bytes signature)` fails with `InvalidInputRpcError: Missing or invalid parameters` on Arc Testnet (2026-04-25)
+`GatewayClient.withdraw()` consistently fails with a `ContractFunctionExecutionError` wrapping
+`InvalidInputRpcError: Missing or invalid parameters` at the `eth_sendRawTransaction` RPC call stage.
+The transaction is valid EIP-1559 format (type 0x02, chain 5042002, correct nonce after `resetGatewayClient()`).
+The specific failure is on `gatewayMint(bytes attestationPayload, bytes signature)` — the CCTP attestation
+bytes returned by Circle's attestation service appear to be malformed or empty, causing the Arc Testnet
+RPC to reject the raw transaction. Reproduced reliably for Arc Testnet creator EOA recipient addresses.
+This makes `withdraw()` (creator cashout) non-functional on Arc Testnet in our environment.
+
+**Workaround we shipped:** exponential backoff — starts at 2 min, doubles on each consecutive failure,
+caps at 30 min per creator — so we don't spam the DB with failed ledger rows.
+
+**Recommendation:** Circle's attestation service should validate the attestation bytes before returning
+them, and the SDK should throw a more specific error (`AttestationInvalidError`) so callers know
+whether to retry or escalate. The current `InvalidInputRpcError` is generic and took several hours to
+diagnose as an upstream attestation issue rather than a local nonce or ABI encoding bug.
+
 ### 4.6a `eth_sendRawTransaction` returns "txpool is full" on Arc Testnet RPC during fund-user-eoa testing (2026-04-25)
 While building Phase 1 of our consumer flow (per-user EOA tick wallets), the platform's `GatewayClient.depositFor(amount, userEoa)` call kept failing with `Details: txpool is full` from `https://rpc.testnet.arc.network`. The approval tx (`approve(GatewayWallet, 50000)` for $0.05) couldn't be submitted at all — error returned at the RPC layer, not in the contract. Reproduced 3x in 90 seconds. Same platform EOA had been successfully sending x402 settlement txs minutes earlier. This isn't an SDK bug, but it does block onboarding flows that rely on `depositFor` — there is no way for an SDK consumer to detect "RPC node mempool saturated" vs. "I have a real bug" from the error message alone. Suggestion: surface mempool-fullness as a typed error the SDK can retry on (with backoff), or document the expected throughput / mempool depth of the public Arc Testnet RPC so devs know to use a private node for high-volume periods.
 

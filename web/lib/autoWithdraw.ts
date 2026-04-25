@@ -20,17 +20,25 @@ import { gatewayConfigured, getGatewayClient, resetGatewayClient, arcExplorerTx 
 
 const MIN_WITHDRAW = new Prisma.Decimal("0.01");
 
-// In-process cooldown: after a failed withdrawal attempt, skip all retries for
-// 60 seconds. Prevents a single gateway error from triggering a rapid-fire storm
-// of retries on every subsequent tick (which fires every 5s).
+// In-process exponential backoff: after each failure the cooldown doubles,
+// starting at 2 min and capped at 30 min. Prevents rapid-fire retries when
+// Circle's CCTP attestation service is returning invalid params (Arc Testnet
+// instability pattern — see circlefeedback.md §4.7).
 const failCooldown = new Map<number, number>();
-const COOLDOWN_MS = 60_000;
+const failCount = new Map<number, number>();
+const COOLDOWN_BASE_MS = 120_000;  // 2 min
+const COOLDOWN_MAX_MS = 1_800_000; // 30 min
+
+function cooldownMs(creatorId: number): number {
+  const n = failCount.get(creatorId) ?? 0;
+  return Math.min(COOLDOWN_BASE_MS * Math.pow(2, n), COOLDOWN_MAX_MS);
+}
 
 export async function maybeAutoWithdrawForCreator(creatorId: number): Promise<void> {
   if (!gatewayConfigured()) return;
 
   const lastFail = failCooldown.get(creatorId);
-  if (lastFail !== undefined && Date.now() - lastFail < COOLDOWN_MS) return;
+  if (lastFail !== undefined && Date.now() - lastFail < cooldownMs(creatorId)) return;
 
   try {
     const creator = await db.user.findUnique({
@@ -99,6 +107,7 @@ export async function maybeAutoWithdrawForCreator(creatorId: number): Promise<vo
       // Engage cooldown + reset client before refunding so the next tick won't
       // immediately retry with the same (possibly corrupted) nonce state.
       failCooldown.set(creatorId, Date.now());
+      failCount.set(creatorId, (failCount.get(creatorId) ?? 0) + 1);
       resetGatewayClient();
       try {
         await db.$transaction([
