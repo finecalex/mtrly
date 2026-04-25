@@ -20,10 +20,17 @@ export async function GET() {
       walletAddress: true,
       circleWalletAddr: true,
       ownedEoaAddress: true,
+      balance: { select: { autoWithdrawThresholdUsdc: true } },
     },
   });
   if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  return NextResponse.json({ ok: true, user });
+  return NextResponse.json({
+    ok: true,
+    user: {
+      ...user,
+      autoWithdrawThresholdUsdc: user.balance?.autoWithdrawThresholdUsdc?.toString() ?? null,
+    },
+  });
 }
 
 const putSchema = z.object({
@@ -32,6 +39,8 @@ const putSchema = z.object({
   avatarUrl: z.string().url().refine((s) => s.startsWith("https://"), "must_be_https").nullable().optional(),
   bio: z.string().max(500).nullable().optional(),
   role: z.enum(["viewer", "creator"]).optional(),
+  // null disables auto-cashout, any positive number sets the threshold in USDC
+  autoWithdrawThresholdUsdc: z.number().positive().max(100).nullable().optional(),
 });
 
 export async function PUT(req: NextRequest) {
@@ -68,6 +77,28 @@ export async function PUT(req: NextRequest) {
       slug: true, avatarUrl: true, bio: true,
     },
   });
+
+  // Auto-cashout threshold lives on Balance; update it separately so the
+  // creator can flip it from the dashboard / settings UI.
+  if (parsed.data.autoWithdrawThresholdUsdc !== undefined) {
+    await db.balance.upsert({
+      where: { userId: uid },
+      update: {
+        autoWithdrawThresholdUsdc:
+          parsed.data.autoWithdrawThresholdUsdc == null
+            ? null
+            : new (await import("@prisma/client")).Prisma.Decimal(parsed.data.autoWithdrawThresholdUsdc),
+      },
+      create: {
+        userId: uid,
+        amountUsdc: 0,
+        autoWithdrawThresholdUsdc:
+          parsed.data.autoWithdrawThresholdUsdc == null
+            ? null
+            : new (await import("@prisma/client")).Prisma.Decimal(parsed.data.autoWithdrawThresholdUsdc),
+      },
+    });
+  }
 
   return NextResponse.json({ ok: true, user: updated });
 }

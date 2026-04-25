@@ -238,9 +238,11 @@
 
   async function bootstrap(url) {
     const matchRes = await sendMessage({ type: "match", url });
+    console.log("[mtrly] bootstrap", url, matchRes);
     if (!matchRes || !matchRes.match) return;
     currentMatch = matchRes;
     injectPanel(matchRes);
+    console.log("[mtrly] panel injected — kind:", matchRes.kind, "pageManaged:", matchRes.pageManaged);
     await hydrateBalance();
 
     if (matchRes.kind === "youtube") {

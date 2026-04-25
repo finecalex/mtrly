@@ -55,9 +55,16 @@ services:
       MTRLY_DEMO_BUYER_KEY: ${MTRLY_DEMO_BUYER_KEY:-}
       MTRLY_DEMO_BUYER_ADDRESS: ${MTRLY_DEMO_BUYER_ADDRESS:-}
       MTRLY_USER_KEY_ENC: ${MTRLY_USER_KEY_ENC:-}
-      VIRTUAL_HOST: circlearc-59513674.slonix.dev
+      # nginx-proxy / acme-companion accept comma-separated host lists, so the
+      # app responds on both the slonix subdomain (used by extension etc.) and
+      # the custom mtrly.xyz / www.mtrly.xyz domain. Each host gets its own
+      # Let's Encrypt cert provisioned automatically on container start.
+      # www.mtrly.xyz removed because it has no DNS A record yet, and
+      # Let's Encrypt fails the *entire* multi-domain cert request when any
+      # one host doesn't resolve. Add www back here once an A record exists.
+      VIRTUAL_HOST: circlearc-59513674.slonix.dev,mtrly.xyz
       VIRTUAL_PORT: "3000"
-      LETSENCRYPT_HOST: circlearc-59513674.slonix.dev
+      LETSENCRYPT_HOST: circlearc-59513674.slonix.dev,mtrly.xyz
       LETSENCRYPT_EMAIL: admin@circlearc-59513674.slonix.dev
     depends_on:
       postgres:

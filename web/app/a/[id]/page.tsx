@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { splitParagraphs, renderInline, readTimeMinutes, firstParagraphPreview } from "@/lib/articleBody";
 import { hashGradient } from "@/lib/gradients";
 import { MeteredArticle } from "@/components/MeteredArticle";
+import { platformGatewayExplorerUrl } from "@/lib/gateway";
 
 export const dynamic = "force-dynamic";
 
@@ -259,18 +260,35 @@ export default async function ArticlePage({ params }: { params: { id: string } }
         </section>
       )}
 
-      {settleAddr && (
-        <div className="mt-10 border-t border-border pt-6 text-sm text-muted">
-          Earnings settle to{" "}
-          <a
-            href={`https://testnet.arcscan.app/address/${settleAddr}`}
-            target="_blank"
-            rel="noreferrer"
-            className="font-mono text-fg hover:underline"
-          >
-            {settleAddr.slice(0, 8)}…{settleAddr.slice(-6)} <ExternalLink size={10} className="inline" />
-          </a>{" "}
-          on Arc Testnet.
+      {(settleAddr || platformGatewayExplorerUrl()) && (
+        <div className="mt-10 space-y-3 border-t border-border pt-6 text-sm text-muted">
+          {platformGatewayExplorerUrl() && (
+            <div>
+              Each tap is a real USDC nanopayment on Arc Testnet, batched through Circle Gateway.{" "}
+              <a
+                href={platformGatewayExplorerUrl() ?? "#"}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono text-fg hover:underline"
+              >
+                view live settlement pool <ExternalLink size={10} className="inline" />
+              </a>
+              {" "}— hundreds of batched transfers visible there.
+            </div>
+          )}
+          {settleAddr && (
+            <div>
+              Creator wallet (earnings withdraw here):{" "}
+              <a
+                href={`https://testnet.arcscan.app/address/${settleAddr}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono text-fg hover:underline"
+              >
+                {settleAddr.slice(0, 8)}…{settleAddr.slice(-6)} <ExternalLink size={10} className="inline" />
+              </a>
+            </div>
+          )}
         </div>
       )}
     </main>

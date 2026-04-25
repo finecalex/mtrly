@@ -53,11 +53,39 @@ export async function GET() {
     for (const c of contents) contentMap.set(c.id, { title: c.title, normalizedUrl: c.normalizedUrl, kind: c.kind });
   }
 
+  // Recent auto-cashouts: BalanceTransaction rows of type=withdraw with our
+  // `auto-withdraw:onchain:<hash>` referenceId encode them. We surface up to
+  // 10 most recent so the dashboard can show real onchain proof of the
+  // creator's earnings flowing to their EOA.
+  const autoCashouts = await db.balanceTransaction.findMany({
+    where: {
+      userId: uid,
+      type: "withdraw",
+      referenceId: { startsWith: "auto-withdraw:onchain:" },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 10,
+    select: { id: true, amountUsdc: true, referenceId: true, createdAt: true },
+  });
+  const autoWithdrawals = autoCashouts.map((r) => {
+    const hash = r.referenceId?.replace(/^auto-withdraw:onchain:/, "") ?? null;
+    return {
+      id: r.id,
+      // amountUsdc is stored negative for withdraws — flip for the UI
+      amountUsdc: new Prisma.Decimal(r.amountUsdc).neg().toString(),
+      createdAt: r.createdAt,
+      onchainTxHash: hash,
+      explorerUrl: hash ? `https://testnet.arcscan.app/tx/${hash}` : null,
+    };
+  });
+
   return NextResponse.json({
     balanceUsdc: balance?.amountUsdc.toString() ?? "0",
+    autoWithdrawThresholdUsdc: balance?.autoWithdrawThresholdUsdc?.toString() ?? null,
     lifetimeEarnedUsdc: scale(totals._sum.amountUsdc?.toString()),
     lifetimePaymentCount: totals._count,
     onchainSettledCount: onchainSettled,
+    autoWithdrawals,
     perContent: perContent.map((r) => ({
       contentId: r.contentId,
       amountUsdc: scale(r._sum.amountUsdc?.toString()),

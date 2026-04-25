@@ -4,6 +4,7 @@ import { PRICING } from "./config";
 import { getPlatformUserId } from "./platform";
 import { gatewayConfigured, settleTickViaGateway } from "./gateway";
 import { getUserGatewayClient } from "./userWallet";
+import { maybeAutoWithdrawForCreator } from "./autoWithdraw";
 
 export type TickKind = "youtube" | "web";
 
@@ -137,6 +138,13 @@ export async function applyTick(params: {
         unitsConsumed: consumption.unitsConsumed,
       };
     });
+
+    // Auto-cashout: every tick may push the creator past their configured
+    // threshold, in which case we flush their balance to their EOA in a
+    // single Gateway mint. Fire-and-forget — never blocks the user's tick.
+    if (gatewayConfigured()) {
+      void maybeAutoWithdrawForCreator(creatorId);
+    }
 
     if (paymentIdForSettle !== null && gatewayConfigured()) {
       const pid = paymentIdForSettle;

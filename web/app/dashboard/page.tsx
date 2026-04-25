@@ -15,6 +15,7 @@ import { hashGradient } from "@/lib/gradients";
 
 type Earnings = {
   balanceUsdc: string;
+  autoWithdrawThresholdUsdc: string | null;
   lifetimeEarnedUsdc: string;
   lifetimePaymentCount: number;
   onchainSettledCount?: number;
@@ -33,6 +34,13 @@ type Earnings = {
     nanopaymentTxId: string | null;
     onchainTxHash: string | null;
     settledOnchain: boolean;
+    explorerUrl: string | null;
+  }>;
+  autoWithdrawals: Array<{
+    id: number;
+    amountUsdc: string;
+    createdAt: string;
+    onchainTxHash: string | null;
     explorerUrl: string | null;
   }>;
 };
@@ -379,6 +387,8 @@ export default function DashboardPage() {
         </section>
       )}
 
+      <AutoCashoutPanel earnings={earnings} onSaved={refresh} />
+
       <section id="publish" className="mt-10 scroll-mt-6">
         <h2 className="font-mono text-xs uppercase text-muted">Publish new content</h2>
         <div className="mt-3 flex gap-1 rounded-lg border border-border bg-surface p-1">
@@ -587,6 +597,114 @@ function StatCard({ label, value, sub, accent }: { label: string; value: string;
         {sub && <div className="mt-1 font-mono text-xs text-muted">{sub}</div>}
       </CardContent>
     </UICard>
+  );
+}
+
+function AutoCashoutPanel({
+  earnings,
+  onSaved,
+}: {
+  earnings: Earnings | null;
+  onSaved: () => void;
+}) {
+  const current = earnings?.autoWithdrawThresholdUsdc;
+  const initial = current ? current : "off";
+  const [value, setValue] = useState<string>(initial);
+  const [saving, setSaving] = useState(false);
+  const toast = useToast();
+
+  useEffect(() => {
+    setValue(current ? String(current) : "off");
+  }, [current]);
+
+  async function save(next: string) {
+    setSaving(true);
+    setValue(next);
+    const payload =
+      next === "off" ? { autoWithdrawThresholdUsdc: null } : { autoWithdrawThresholdUsdc: parseFloat(next) };
+    const res = await fetch("/api/profile", {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      toast.push({ kind: "error", title: "Save failed" });
+      return;
+    }
+    toast.push({
+      kind: "success",
+      title: next === "off" ? "Auto-cashout off" : `Auto-cashout at $${parseFloat(next).toFixed(2)}`,
+      description: next === "off"
+        ? "You'll withdraw manually."
+        : "Your balance will flush to your Arc wallet whenever it crosses this threshold.",
+    });
+    onSaved();
+  }
+
+  const recent = earnings?.autoWithdrawals ?? [];
+
+  return (
+    <section className="mt-6 rounded-xl border border-border bg-surface/40 p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <h3 className="text-sm font-semibold">Auto-cashout to your Arc wallet</h3>
+          <p className="mt-1 text-xs text-muted">
+            Whenever your balance crosses the threshold, Mtrly mints the full balance to your EOA in
+            one onchain Arc tx. Batched per creator — gas-efficient, fully visible on arcscan.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-border bg-bg p-1">
+          {(["off", "0.05", "0.10", "0.50", "1.00"] as const).map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              disabled={saving}
+              onClick={() => save(opt)}
+              className={`rounded-md px-3 py-1 font-mono text-[11px] uppercase transition-colors ${
+                value === opt
+                  ? "bg-accent/15 text-accent"
+                  : "text-muted hover:text-fg"
+              }`}
+            >
+              {opt === "off" ? "off" : `$${opt}`}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {recent.length > 0 && (
+        <div className="mt-4">
+          <div className="font-mono text-[10px] uppercase text-muted">
+            Recent auto-cashouts ({recent.length})
+          </div>
+          <ul className="mt-2 space-y-1 font-mono text-xs">
+            {recent.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-3 border-b border-border/40 py-1.5 last:border-b-0"
+              >
+                <span className="text-muted">{new Date(r.createdAt).toLocaleString()}</span>
+                <span className="text-accent tabular-nums">+${parseFloat(r.amountUsdc).toFixed(4)}</span>
+                {r.explorerUrl ? (
+                  <a
+                    href={r.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-green-400/40 bg-green-400/5 px-2 py-0.5 text-[10px] text-green-400 hover:bg-green-400/10"
+                    title={r.onchainTxHash ?? ""}
+                  >
+                    {r.onchainTxHash ? `${r.onchainTxHash.slice(0, 6)}…${r.onchainTxHash.slice(-4)}` : "view"} ↗
+                  </a>
+                ) : (
+                  <span className="text-muted">pending</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
   );
 }
 

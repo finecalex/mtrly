@@ -67,6 +67,10 @@ model Balance {
   userId      Int      @unique
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   amountUsdc  Decimal  @default(0) @db.Decimal(20, 8)
+  // Auto-cashout: when set, every tick that pushes the creator's balance
+  // above this threshold triggers an async Gateway mint to their EOA. Null
+  // means manual withdraw only.
+  autoWithdrawThresholdUsdc Decimal? @db.Decimal(20, 8)
   updatedAt   DateTime @updatedAt
 }
 
