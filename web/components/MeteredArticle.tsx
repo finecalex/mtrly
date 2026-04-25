@@ -59,38 +59,47 @@ export function MeteredArticle({
 }) {
   const total = paragraphs.length;
 
-  // Server only knows the *count* of paid paragraphs (Consumption.unitsConsumed).
-  // It can't tell which specific indices were paid, since applyTick increments a
-  // counter rather than recording an index. We reconstruct the per-index set on
-  // the client by merging:
-  //   1. The first paragraph (always free)
-  //   2. localStorage from prior visits on this device
-  //   3. A sequential fallback (0..initialPaidCount) so that even on a fresh
-  //      device the user sees at least the count-implied paragraphs unlocked
-  // The localStorage record is the source of truth for *which* paragraphs are
-  // unlocked visually; the server's count is the source of truth for billing.
-  const initialUnlockSet = useMemo(() => {
+  // Initial render uses ONLY server-supplied data so SSR HTML and the first
+  // client render are byte-identical — otherwise React hydration fails with
+  // error #423. The localStorage merge runs in a useEffect after mount and
+  // can only widen the unlocked set (never re-locks), so we never re-charge
+  // a paragraph the user already paid for.
+  const serverUnlockSet = useMemo(() => {
     if (isOwner) return new Set(paragraphs.map((p) => p.idx));
     const s = new Set<number>([0]);
     if (!isAuthed) return s;
-    const fromLs = loadPaidFromLocalStorage(viewerId, contentId);
-    for (const i of fromLs) if (i < total) s.add(i);
-    // Sequential fallback only if the localStorage record is shorter than the
-    // server's count (fresh device, etc.) — top up so the user doesn't see
-    // paragraphs marked locked that they've already paid for.
-    if (fromLs.length < initialPaidCount) {
-      for (let i = 1; i <= initialPaidCount && i < total; i++) s.add(i);
-    }
+    for (let i = 1; i <= initialPaidCount && i < total; i++) s.add(i);
     return s;
-  }, [paragraphs, isOwner, isAuthed, initialPaidCount, total, contentId, viewerId]);
+  }, [paragraphs, isOwner, isAuthed, initialPaidCount, total]);
 
   const [states, setStates] = useState<Record<number, ParagraphState>>(() => {
     const init: Record<number, ParagraphState> = {};
     paragraphs.forEach((p) => {
-      init[p.idx] = initialUnlockSet.has(p.idx) ? "unlocked" : "locked";
+      init[p.idx] = serverUnlockSet.has(p.idx) ? "unlocked" : "locked";
     });
     return init;
   });
+
+  // Post-hydration localStorage merge. Bumps any paragraph the user paid
+  // for on a previous visit from "locked" to "unlocked". Owner / guest
+  // skip — owner already sees everything, guest can't have paid.
+  useEffect(() => {
+    if (isOwner || !isAuthed) return;
+    const fromLs = loadPaidFromLocalStorage(viewerId, contentId);
+    if (fromLs.length === 0) return;
+    setStates((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const i of fromLs) {
+        if (i < 0 || i >= total) continue;
+        if (next[i] === "locked") {
+          next[i] = "unlocked";
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [isOwner, isAuthed, viewerId, contentId, total]);
   const [revealAnim, setRevealAnim] = useState<Set<number>>(new Set());
   const [coinPop, setCoinPop] = useState<Set<number>>(new Set());
   const sessionRef = useRef<string | null>(null);
