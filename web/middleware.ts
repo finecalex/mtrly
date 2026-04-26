@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const ALLOWED_ORIGIN_PREFIXES = ["chrome-extension://", "moz-extension://"];
+const ALLOWED_ORIGIN_EXACT = new Set([
+  "https://mtrly.xyz",
+  "https://www.mtrly.xyz",
+]);
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
+  if (ALLOWED_ORIGIN_EXACT.has(origin)) return true;
   return ALLOWED_ORIGIN_PREFIXES.some((p) => origin.startsWith(p));
 }
 

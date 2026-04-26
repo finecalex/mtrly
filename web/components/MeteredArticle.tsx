@@ -8,6 +8,9 @@ import { useToast } from "@/components/ui/Toaster";
 type ParagraphState = "locked" | "paying" | "unlocked";
 
 const PRICE_PER_PARAGRAPH = 0.005;
+// Always call the canonical app origin so the mtrly_session cookie is sent
+// even when the article is served via mtrly.xyz (cross-origin but same server).
+const API_BASE = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
 // Storage key MUST include viewerId. Otherwise demo viewer A's unlocked set
 // leaks into demo viewer B on the same browser, and viewer B sees paragraphs
@@ -111,8 +114,9 @@ export function MeteredArticle({
     if (sessionInflight.current) return sessionInflight.current;
     sessionInflight.current = (async () => {
       try {
-        const res = await fetch("/api/session/start", {
+        const res = await fetch(`${API_BASE}/api/session/start`, {
           method: "POST",
+          credentials: "include",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ contentId }),
         });
@@ -171,8 +175,9 @@ export function MeteredArticle({
         return;
       }
       try {
-        const res = await fetch("/api/billing/tick", {
+        const res = await fetch(`${API_BASE}/api/billing/tick`, {
           method: "POST",
+          credentials: "include",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ sessionId: sid }),
         });

@@ -188,18 +188,27 @@
     if (video.dataset.mtrlyAttached) return;
     video.dataset.mtrlyAttached = "1";
 
-    video.addEventListener("play", async () => {
+    // "playing" (not "play") fires only when frames are actually being rendered —
+    // after buffering/seeking completes. Using "play" would start the ticker the
+    // moment the user clicks play, including while the video is still loading or
+    // while a YouTube ad is queued (ad-showing class may not be set yet).
+    video.addEventListener("playing", async () => {
+      if (isYouTubeAdPlaying()) return;
       hideBlockingOverlay();
       const sid = await ensureSession();
       if (sid) startTicker();
     });
+    // Stop billing while the browser is waiting for more data (buffering/seeking).
+    video.addEventListener("waiting", stopTicker);
     video.addEventListener("pause", stopTicker);
     video.addEventListener("ended", () => {
       stopTicker();
       endSession();
     });
 
-    if (!video.paused && !video.ended) {
+    // Video already playing when extension injected (e.g. auto-play).
+    // readyState >= 3 = HAVE_FUTURE_DATA, meaning actual frames are available.
+    if (!video.paused && !video.ended && video.readyState >= 3 && !isYouTubeAdPlaying()) {
       ensureSession().then((sid) => { if (sid) startTicker(); });
     }
   }
